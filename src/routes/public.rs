@@ -6,5 +6,5 @@ async fn index() -> impl Responder {
 
 
 pub fn routes(scope: Scope) -> Scope {
-    scope.route("/hello", web::get().to(index))
+    scope.route("/news", web::get().to(index))
 }
