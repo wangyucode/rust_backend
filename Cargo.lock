@@ -562,7 +562,7 @@ dependencies = [
 name = "rust_backend"
 version = "0.1.0"
 dependencies = [
- "log",
+ "futures 0.3.13",
  "thruster",
 ]
 

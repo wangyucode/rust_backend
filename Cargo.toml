@@ -8,5 +8,5 @@ edition = "2018"
 
 [dependencies]
 thruster = "1.0.3"
-log = "0.4"
+futures = "0.3"
 
