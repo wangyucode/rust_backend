@@ -1,22 +1,22 @@
-use actix_web::{web, App, HttpServer};
-use routes::{admin, public};
+use log::info;
+use thruster::{async_middleware, middleware_fn};
+use thruster::{App, BasicContext as Ctx, Request, Server, ThrusterServer};
+use thruster::{MiddlewareNext, MiddlewareResult};
 
-mod routes {
-    pub mod admin;
-    pub mod public;
+#[middleware_fn]
+async fn plaintext(mut context: Ctx, _next: MiddlewareNext<Ctx>) -> MiddlewareResult<Ctx> {
+    let val = "Hello, World!";
+    context.body(val);
+    Ok(context)
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new().service(
-            // prefixes all resources and routes attached to it...
-            web::scope("/rust")
-                .service(public::routes(web::scope("/public")))
-                .service(admin::routes(web::scope("/admin")))
-        )
-    })
-    .bind("0.0.0.0:8080")?
-    .run()
-    .await
+fn main() {
+    info!("Starting server...");
+
+    let mut app = App::<Request, Ctx, ()>::new_basic();
+
+    app.get("/plaintext", async_middleware!(Ctx, [plaintext]));
+
+    let server = Server::new(app);
+    server.start("127.0.0.1", 8080);
 }
