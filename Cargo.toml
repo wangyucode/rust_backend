@@ -10,3 +10,5 @@ edition = "2018"
 roa = { version = "0.5", features = ["router", "jwt"] }
 async-std = { version = "1.6", features = ["attributes"] }
 blake2 = "0.9"
+jsonwebtoken = "7"
+serde = {version = "1.0", features = ["derive"] }
