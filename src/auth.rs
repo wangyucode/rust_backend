@@ -7,6 +7,7 @@ use roa::http::header::CONTENT_TYPE;
 use roa::jwt::{DecodingKey, guard, JwtGuard};
 use roa::query::Query;
 use serde::{Deserialize, Serialize};
+use crate::state::State;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -23,7 +24,7 @@ pub fn auth_guard() -> JwtGuard {
     guard(DecodingKey::from_secret(&Blake2b::digest(JWT_SECRET)))
 }
 
-pub async fn login(ctx: &mut Context) -> Result {
+pub async fn login(ctx: &mut Context<State>) -> Result {
     let username = &*ctx.must_query("u")?;
     let password = &*ctx.must_query("p")?;
     // TODO check the username and password;
