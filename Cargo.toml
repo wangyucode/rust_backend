@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-roa = { version = "0.5", features = ["router", "jwt"] }
+roa = { version = "0.5", features = ["router", "jwt", "json"] }
 async-std = { version = "1.6", features = ["attributes"] }
 blake2 = "0.9"
 jsonwebtoken = "7"
-serde = {version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
