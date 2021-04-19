@@ -1,11 +1,12 @@
-use blake2::{Blake2b, Digest};
-use jsonwebtoken::{encode, EncodingKey, Header};
-use roa::jwt::{guard, DecodingKey, JwtGuard};
-use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use roa::query::Query;
+use blake2::{Blake2b, Digest};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use roa::{Context, Result};
+use roa::http::header::CONTENT_TYPE;
+use roa::jwt::{DecodingKey, guard, JwtGuard};
+use roa::query::Query;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -29,7 +30,7 @@ pub async fn login(ctx: &mut Context) -> Result {
     println!("{},{}", username, password);
 
     let claims = Claims {
-        exp: (SystemTime::now() + Duration::from_secs(60))
+        exp: (SystemTime::now() + Duration::from_secs(86400))
             .duration_since(UNIX_EPOCH)?
             .as_secs(),
         uid: 1,
@@ -42,6 +43,7 @@ pub async fn login(ctx: &mut Context) -> Result {
         &claims,
         &EncodingKey::from_secret(&Blake2b::digest(JWT_SECRET)),
     )?;
+    ctx.resp.headers.insert(CONTENT_TYPE, "text/plain".parse().unwrap());
     ctx.resp.write(jwt);
     Ok(())
 }

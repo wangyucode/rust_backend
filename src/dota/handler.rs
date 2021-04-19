@@ -11,7 +11,12 @@ struct User {
 pub async fn get_news(ctx: &mut Context) -> Result {
     let user = User { id: 123, name: "name".to_string() };
     ctx.write_json(&user)?;
+    Ok(())
+}
 
+pub async fn put_news(ctx: &mut Context) -> Result {
+    let user: User = ctx.read_json().await?;
+    println!("{:?}", user);
     Ok(())
 }
 
