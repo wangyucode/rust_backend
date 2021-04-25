@@ -2,7 +2,7 @@ use roa::query::query_parser;
 use roa::router::{put, Router};
 
 use crate::auth::{auth_guard, login};
-use crate::dota::handler::{get_news, print_path, put_news};
+use crate::dota::handler::{get_news, put_news};
 use crate::state::State;
 
 pub fn router() -> Router<State> {
@@ -12,6 +12,6 @@ pub fn router() -> Router<State> {
     Router::new()
         .gate(query_parser)
         .on("/dota/news", get_news)
-        .on("/admin/login", login)
+        .on("/login", login)
         .include("/admin", admin)
 }

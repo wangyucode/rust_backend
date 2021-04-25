@@ -1,7 +1,7 @@
 use roa::{Context, Result};
 use roa::body::PowerBody;
 use serde::{Deserialize, Serialize};
-use crate::state::State;
+use crate::state::{State, DotaNews};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct User {
@@ -10,20 +10,16 @@ struct User {
 }
 
 pub async fn get_news(ctx: &mut Context<State>) -> Result {
-    let user = User { id: 123, name: "name".to_string() };
-    ctx.write_json(&user)?;
+    ctx.write_json(ctx.dota_news.lock().unwrap().as_slice())?;
     Ok(())
 }
 
 pub async fn put_news(ctx: &mut Context<State>) -> Result {
-    let user: User = ctx.read_json().await?;
-    println!("{:?}", user);
-    Ok(())
-}
-
-pub async fn print_path(ctx: &mut Context<State>) -> Result {
-    let path = ctx.req.uri.path();
-    ctx.resp.write(path.to_owned());
+    let news: Vec<DotaNews> = ctx.read_json().await?;
+    println!("{:?}", news);
+    let mut state_news = ctx.dota_news.lock().unwrap();
+    state_news.clear();
+    state_news.clone_from_slice(news.as_slice());
     Ok(())
 }
 
