@@ -1,0 +1,119 @@
+openapi: 3.0.0
+info:
+  title: WYCODE API Docs - OpenAPI 3.0
+  description: This is wycode.cn 's Rust backend API doc based on the OpenAPI 3.0 specification.
+  version: 2025.12.7
+  contact:
+    name: 王郁
+    email: wangyu@wycode.cn
+
+servers:
+  - url: http://localhost:8080/api/v1
+  - url: https://wycode.cn/api/v1
+
+paths:
+  /:
+    get:
+      summary: Get service status
+      description: Returns the current state of the service
+      operationId: getState
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StateResponse"
+
+  /email:
+    post:
+      summary: Send email
+      description: Sends an email using the configured SMTP server
+      operationId: sendEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "200":
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailResponse"
+
+components:
+  schemas:
+    StateResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            state:
+              type: string
+              example: "UP"
+            time:
+              type: integer
+              format: int64
+              example: 1733612800000
+            uuid:
+              type: string
+              format: uuid
+              example: "550e8400-e29b-41d4-a716-446655440000"
+            version:
+              type: string
+              example: "1.0.0"
+
+    EmailRequest:
+      type: object
+      required:
+        - key
+        - content
+      properties:
+        key:
+          type: string
+          description: Authentication key
+          example: "your-secret-key"
+        subject:
+          type: string
+          description: Email subject (optional)
+          example: "Test Email"
+        content:
+          type: string
+          description: Email content
+          example: "This is a test email from Rust Backend"
+        to:
+          type: string
+          description: Recipient email (optional)
+          example: "recipient@example.com"
+
+    EmailResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            state:
+              type: string
+              example: "ok"
