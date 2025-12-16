@@ -2,16 +2,14 @@ use actix_web::{HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::ApiResponse;
+
 #[derive(Serialize, Deserialize)]
 struct DataResult {
     state: String,
     time: u128,
     uuid: String,
     version: String,
-}
-#[derive(Serialize, Deserialize)]
-struct Response {
-    data: DataResult,
 }
 
 pub async fn state() -> impl Responder {
@@ -24,6 +22,5 @@ pub async fn state() -> impl Responder {
         uuid: Uuid::new_v4().to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
     };
-    let response = Response { data };
-    HttpResponse::Ok().json(response)
+    HttpResponse::Ok().json(ApiResponse::data_success(data))
 }

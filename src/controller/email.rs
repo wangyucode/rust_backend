@@ -1,8 +1,10 @@
 use actix_web::{HttpResponse, Responder, web};
 use lettre::message::header::ContentType;
 use lettre::{Message, SmtpTransport, Transport};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::env;
+
+use super::ApiResponse;
 
 #[derive(Deserialize)]
 pub struct EmailRequest {
@@ -12,35 +14,18 @@ pub struct EmailRequest {
     to: Option<String>,
 }
 
-#[derive(Serialize)]
-struct DataResult {
-    state: String,
-}
-
-#[derive(Serialize)]
-struct Response {
-    data: DataResult,
-}
-
 pub async fn send_email(req: web::Json<EmailRequest>) -> impl Responder {
     // 验证content是否存在
     if req.content.is_empty() {
-        return HttpResponse::BadRequest().json(Response {
-            data: DataResult {
-                state: "content is required".to_string(),
-            },
-        });
+        return HttpResponse::BadRequest()
+            .json(ApiResponse::<()>::error("content is required".to_string()));
     }
 
     // 验证key是否正确
     let mail_password = env::var("MAIL_PASSWORD").unwrap_or_default();
     println!("mail_password: {}", mail_password);
     if req.key != mail_password {
-        return HttpResponse::Forbidden().json(Response {
-            data: DataResult {
-                state: "invalid key".to_string(),
-            },
-        });
+        return HttpResponse::Forbidden().json(ApiResponse::<()>::error("invalid key".to_string()));
     }
 
     // 设置默认值
@@ -62,11 +47,8 @@ pub async fn send_email(req: web::Json<EmailRequest>) -> impl Responder {
         Ok(email) => email,
         Err(e) => {
             eprintln!("Error creating email: {:?}", e);
-            return HttpResponse::InternalServerError().json(Response {
-                data: DataResult {
-                    state: "error creating email".to_string(),
-                },
-            });
+            return HttpResponse::InternalServerError()
+                .json(ApiResponse::<()>::error("error creating email".to_string()));
         }
     };
 
@@ -91,19 +73,12 @@ pub async fn send_email(req: web::Json<EmailRequest>) -> impl Responder {
     match mailer.send(&email) {
         Ok(_) => {
             println!("Sent email to: {}", to_email);
-            HttpResponse::Ok().json(Response {
-                data: DataResult {
-                    state: "ok".to_string(),
-                },
-            })
+            HttpResponse::Ok().json(ApiResponse::<()>::message_success("ok".to_string()))
         }
         Err(e) => {
             eprintln!("Error sending email: {:?}", e);
-            HttpResponse::InternalServerError().json(Response {
-                data: DataResult {
-                    state: "error sending email".to_string(),
-                },
-            })
+            HttpResponse::InternalServerError()
+                .json(ApiResponse::<()>::error("error sending email".to_string()))
         }
     }
 }
