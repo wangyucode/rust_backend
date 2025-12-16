@@ -12,7 +12,7 @@ pub struct App {
 
 // 获取所有应用列表
 pub async fn get_all_apps(pool: &SqlitePool) -> Result<Vec<App>, sqlx::Error> {
-    let apps = sqlx::query_as("SELECT appid, name, image, description FROM apps")
+    let apps = sqlx::query_as("SELECT id, appid, name, image, description FROM apps")
         .fetch_all(pool)
         .await?;
 

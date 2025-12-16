@@ -2020,11 +2020,12 @@ dependencies = [
 
 [[package]]
 name = "rust_backend"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "actix-files",
  "actix-web",
  "anyhow",
+ "chrono",
  "dotenv",
  "lettre 0.10.4",
  "lettre_email",
