@@ -63,21 +63,9 @@ cargo build
 
 ### 环境变量配置 (Environment Variables Configuration)
 
-创建 `.env` 文件并配置以下内容：
+创建 `.env` 文件并配置环境变量。搜索 `env::var` 相关代码，根据实际情况配置。
 
-Create a `.env` file and configure the following content:
-
-```env
-# 数据库URL (Database URL)
-DATABASE_URL=sqlite://./demo.db
-
-# SMTP配置 (SMTP Configuration)
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USERNAME=your_username
-SMTP_PASSWORD=your_password
-SMTP_FROM=your_email@example.com
-```
+Create a `.env` file and configure environment variables. Search for `env::var` related code and configure according to actual situations.
 
 ## 数据库 (Database)
 

@@ -50,9 +50,6 @@ pub fn send_email(config: EmailConfig) -> Result<(), String> {
         println!("From: {}", config.from);
         println!("To: {}", config.to);
         println!("Subject: {}", config.subject);
-        println!("Content: {}", config.content);
-        println!("SMTP Server: {}", smtp_server);
-        println!("SMTP Port: {}", smtp_port);
         println!("[开发环境] 邮件发送模拟完成");
         return Ok(());
     }
