@@ -6,13 +6,13 @@ use sqlx::{FromRow, SqlitePool};
 pub struct App {
     pub appid: String,
     pub name: String,
-    pub image: String,
-    pub description: String,
+    pub img: String,
+    pub note: String,
 }
 
 // 获取所有应用列表
 pub async fn get_all_apps(pool: &SqlitePool) -> Result<Vec<App>, sqlx::Error> {
-    let apps = sqlx::query_as("SELECT id, appid, name, image, description FROM apps")
+    let apps = sqlx::query_as("SELECT id, appid, name, img, note FROM wechat_apps")
         .fetch_all(pool)
         .await?;
 
