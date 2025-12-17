@@ -1,4 +1,4 @@
 /target
 .env
-db/sqlite.db
+db
 old
