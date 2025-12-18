@@ -67,3 +67,33 @@ pub async fn get_comments_by_app_topic(
 
     Ok(comments)
 }
+
+// 插入新评论
+pub async fn insert_comment(pool: &SqlitePool, comment: &Comment) -> Result<String, sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO comment (id, app, topic, content, create_time, user, like, to_user, to_content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+    .bind(&comment.id)
+    .bind(&comment.app)
+    .bind(&comment.topic)
+    .bind(&comment.content)
+    .bind(comment.create_time)
+    .bind(&comment.user)
+    .bind(comment.like)
+    .bind(&comment.to_user)
+    .bind(&comment.to_content)
+    .execute(pool)
+    .await?;
+
+    Ok(comment.id.clone())
+}
+
+// 更新评论点赞数
+pub async fn update_comment_like(pool: &SqlitePool, comment_id: &str) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query("UPDATE comment SET like = like + 1 WHERE id = ?")
+        .bind(comment_id)
+        .execute(pool)
+        .await?;
+
+    Ok(result.rows_affected())
+}

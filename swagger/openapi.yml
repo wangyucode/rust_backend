@@ -62,6 +62,111 @@ paths:
               schema:
                 $ref: "#/components/schemas/EmailResponse"
 
+  /wechat/apps:
+    get:
+      summary: Get wechat apps list
+      description: Returns the list of wechat apps
+      operationId: getApps
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppsResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /comment:
+    get:
+      summary: Get comments
+      description: Returns the list of comments for a specific app and topic
+      operationId: getComments
+      parameters:
+        - name: a
+          in: query
+          description: App ID
+          required: true
+          schema:
+            type: string
+        - name: k
+          in: query
+          description: Authentication key
+          required: true
+          schema:
+            type: string
+        - name: t
+          in: query
+          description: Topic
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentsResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      summary: Post comment
+      description: Creates a new comment or likes an existing one
+      operationId: postComment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCommentRequest"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentPostResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     StateResponse:
@@ -117,3 +222,136 @@ components:
             state:
               type: string
               example: "ok"
+
+    App:
+      type: object
+      properties:
+        appid:
+          type: string
+          description: Wechat app ID
+          example: "wx1234567890abcdef"
+        name:
+          type: string
+          description: App name
+          example: "Test App"
+        img:
+          type: string
+          description: App image URL
+          example: "https://example.com/app.jpg"
+        note:
+          type: string
+          description: App description
+          example: "This is a test wechat app"
+
+    AppsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/App"
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: "Internal server error"
+
+    ToResponse:
+      type: object
+      properties:
+        content:
+          type: string
+          description: Comment content being replied to
+          example: "This is a great post!"
+        user:
+          type: string
+          description: User being replied to
+          example: "user@example.com"
+
+    CommentResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Comment ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        content:
+          type: string
+          description: Comment content
+          example: "This is a comment"
+        user:
+          type: string
+          description: Comment author
+          example: "user@example.com"
+        like:
+          type: integer
+          description: Number of likes
+          example: 0
+        createTime:
+          type: string
+          description: Creation time
+          example: "2025/12/18 12:00:00"
+        to:
+          $ref: "#/components/schemas/ToResponse"
+          description: Reply information (optional)
+
+    CommentsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentResponse"
+
+    PostCommentRequest:
+      type: object
+      required:
+        - type
+        - app
+        - key
+        - topic
+        - user
+      properties:
+        type:
+          type: integer
+          description: "Comment type (0: comment, 1: like)"
+          example: 0
+        content:
+          type: string
+          description: Comment content (required for type 0)
+          example: "This is a new comment"
+        app:
+          type: string
+          description: App ID
+          example: "test-app"
+        key:
+          type: string
+          description: Authentication key
+          example: "your-secret-key"
+        topic:
+          type: string
+          description: Topic
+          example: "general"
+        user:
+          type: string
+          description: Comment author
+          example: "user@example.com"
+        to:
+          type: string
+          description: Reply to user (optional)
+          example: "another-user@example.com"
+        toId:
+          type: string
+          description: Reply to comment ID (optional)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    CommentPostResponse:
+      type: object
+      properties:
+        data:
+          type: string
+          description: Created comment ID or updated count
+          example: "550e8400-e29b-41d4-a716-446655440000"
