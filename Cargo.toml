@@ -23,3 +23,5 @@ sqlx = { version = "0.7", features = [
     "macros",
     "chrono",
 ] }
+regex = "1"
+lazy_static = "1"

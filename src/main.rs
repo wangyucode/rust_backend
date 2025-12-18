@@ -1,7 +1,5 @@
 use crate::after_startup::after_startup;
-use crate::controller::app::get_apps;
-use crate::controller::email::send_email_handler;
-use crate::controller::state::state;
+use crate::controller::{app, comment, email, state};
 use crate::dao::database::init_database_pool;
 use actix_web::{App, HttpServer, web};
 use anyhow::Result;
@@ -28,9 +26,10 @@ async fn main() -> Result<()> {
             .app_data(web::Data::new(Arc::clone(&pool)))
             .service(
                 web::scope("/api/v1")
-                    .route("/", web::get().to(state))
-                    .route("/email", web::post().to(send_email_handler))
-                    .route("/wechat/apps", web::get().to(get_apps))
+                    .route("/", web::get().to(state::state))
+                    .route("/email", web::post().to(email::send_email_handler))
+                    .route("/wechat/apps", web::get().to(app::get_apps))
+                    .route("/comment", web::get().to(comment::get_comments))
                     .service(actix_files::Files::new("/doc", "swagger").index_file("index.html")),
             )
     })
