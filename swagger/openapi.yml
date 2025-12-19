@@ -167,6 +167,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /clipboard/{id}:
+    get:
+      summary: Get clipboard by ID
+      description: Returns clipboard content by its ID
+      operationId: getClipboardById
+      parameters:
+        - name: id
+          in: path
+          description: Clipboard ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClipboardResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Clipboard not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     StateResponse:
@@ -355,3 +393,28 @@ components:
           type: string
           description: Created comment ID or updated count
           example: "550e8400-e29b-41d4-a716-446655440000"
+
+    ClipboardResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            _id:
+              type: string
+              description: Clipboard ID
+              example: "clipboard-123"
+            content:
+              type: string
+              description: Clipboard content
+              example: "This is some clipboard content"
+            createDate:
+              type: integer
+              format: int64
+              description: Creation timestamp
+              example: 1733612800000
+            lastUpdate:
+              type: integer
+              format: int64
+              description: Last update timestamp
+              example: 1733612900000

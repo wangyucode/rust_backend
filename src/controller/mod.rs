@@ -35,3 +35,4 @@ pub mod app;
 pub mod email;
 pub mod state;
 pub mod comment;
+pub mod clipboard;

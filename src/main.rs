@@ -1,5 +1,5 @@
 use crate::after_startup::after_startup;
-use crate::controller::{app, comment, email, state};
+use crate::controller::{app, clipboard, comment, email, state};
 use crate::dao::database::init_database_pool;
 use actix_web::{App, HttpServer, web};
 use anyhow::Result;
@@ -31,6 +31,7 @@ async fn main() -> Result<()> {
                     .route("/wechat/apps", web::get().to(app::get_apps))
                     .route("/comment", web::get().to(comment::get_comments))
                     .route("/comment", web::post().to(comment::post_comment))
+                    .route("/clipboard/{id}", web::get().to(clipboard::get_by_id))
                     .service(actix_files::Files::new("/doc", "swagger").index_file("index.html")),
             )
     })
