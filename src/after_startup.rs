@@ -31,16 +31,11 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
         // 每24小时执行一次清理
         let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
 
-        // 立即执行一次清理
-        if let Err(e) = clean_old_visits_task(&pool_for_cleanup).await {
-            eprintln!("❌ 清理旧访问记录失败: {}", e);
-        }
-
         // 定时执行清理
         loop {
             interval.tick().await;
             if let Err(e) = clean_old_visits_task(&pool_for_cleanup).await {
-                eprintln!("❌ 定时清理旧访问记录失败: {}", e);
+                eprintln!("❌ 清理旧访问记录失败: {}", e);
             }
         }
     });
@@ -71,7 +66,10 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
 
 /// 清理旧访问记录的任务
 async fn clean_old_visits_task(pool: &Arc<SqlitePool>) -> Result<()> {
-    println!("🧹 开始清理超过30天的访问记录...");
+    println!(
+        "🧹 开始清理超过30天的访问记录...{}",
+        chrono::Local::now().to_string()
+    );
 
     // 执行清理
     blog::clean_old_visits(pool.as_ref()).await?;
