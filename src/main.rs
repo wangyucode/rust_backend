@@ -51,6 +51,7 @@ async fn main() -> Result<()> {
                     .route("/coze/token", web::get().to(coze::get_token))
                     .route("/config", web::get().to(config::get_config))
                     .route("/blog-view", web::get().to(blog::record_blog_view))
+                    .route("/popular-posts", web::get().to(blog::get_popular_posts))
                     .service(actix_files::Files::new("/doc", "swagger").index_file("index.html")),
             )
     })

@@ -351,6 +351,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
 
+  /popular-posts:
+    get:
+      tags:
+        - Blog
+      summary: Get popular posts
+      description: Returns a list of popular blog posts based on view count within the specified time period
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+          description: Number of days to look back for popular posts (default is 30)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of popular posts to return (default is 10)
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error (failed to get popular posts)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
   # Config API
   /config:
     get:
@@ -408,15 +443,11 @@ components:
             - type: object
               description: Response data (for data success)
             - $ref: "#/components/schemas/CozeTokenResponse"
+            - $ref: "#/components/schemas/PopularPostsResponse"
           description: Response data (for data success)
       example:
         success: true
-        payload:
-          {
-            "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-            "token_type": "Bearer",
-            "expires_in": 900,
-          }
+        payload: {}
         message: ""
 
     # Email API schemas
@@ -522,3 +553,27 @@ components:
         access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
         token_type: "Bearer"
         expires_in: 900
+
+    # Blog API schemas
+    PopularPost:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Blog post ID
+        view_count:
+          type: integer
+          description: Number of views
+      example:
+        id: "blog_post_123"
+        view_count: 42
+
+    PopularPostsResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/PopularPost"
+      example:
+        - id: "blog_post_123"
+          view_count: 42
+        - id: "blog_post_456"
+          view_count: 28
