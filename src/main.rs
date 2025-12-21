@@ -1,5 +1,5 @@
 use crate::after_startup::after_startup;
-use crate::controller::{app, clipboard, comment, email, state};
+use crate::controller::{clipboard, comment, email, state, wechat};
 use crate::dao::database::init_database_pool;
 use actix_web::{App, HttpServer, web};
 use anyhow::Result;
@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
                 web::scope("/api/v1")
                     .route("/", web::get().to(state::state))
                     .route("/email", web::post().to(email::send_email_handler))
-                    .route("/wechat/apps", web::get().to(app::get_apps))
+                    .route("/wechat/apps", web::get().to(wechat::get_apps))
                     .route("/comment", web::get().to(comment::get_comments))
                     .route("/comment", web::post().to(comment::post_comment))
                     .route("/clipboard/{id}", web::get().to(clipboard::get_by_id))

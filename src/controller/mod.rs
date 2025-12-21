@@ -31,8 +31,8 @@ impl<T> ApiResponse<T> {
     }
 }
 
-pub mod app;
+pub mod clipboard;
+pub mod comment;
 pub mod email;
 pub mod state;
-pub mod comment;
-pub mod clipboard;
+pub mod wechat;
