@@ -33,6 +33,7 @@ impl<T> ApiResponse<T> {
 
 pub mod clipboard;
 pub mod comment;
+pub mod coze;
 pub mod email;
 pub mod state;
 pub mod wechat;
