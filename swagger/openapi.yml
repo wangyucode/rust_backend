@@ -1,0 +1,579 @@
+openapi: 3.0.0
+info:
+  title: WYCODE API Docs - OpenAPI 3.0
+  description: This is wycode.cn 's Rust backend API doc based on the OpenAPI 3.0 specification.
+  version: 2025.12.21
+  contact:
+    name: 王郁
+    email: wangyu@wycode.cn
+
+servers:
+  - url: http://localhost:8080/api/v1
+  - url: https://wycode.cn/api/v1
+
+paths:
+  # System API
+  /:
+    get:
+      tags:
+        - System
+      summary: Get system status
+      description: Returns the current system status and version information
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  # Email API
+  /email:
+    post:
+      tags:
+        - Email
+      summary: Send email
+      description: Sends an email with the specified content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "200":
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing required fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "403":
+          description: Forbidden (invalid key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  # Wechat API
+  /wechat/apps:
+    get:
+      tags:
+        - Wechat
+      summary: Get all WeChat apps
+      description: Returns a list of all registered WeChat applications
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  # Comment API
+  /comment:
+    get:
+      tags:
+        - Comment
+      summary: Get comments
+      description: Returns a list of comments for a specific app and topic
+      parameters:
+        - name: a
+          in: query
+          required: true
+          schema:
+            type: string
+          description: App ID
+        - name: k
+          in: query
+          required: true
+          schema:
+            type: string
+          description: App Key
+        - name: t
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Topic
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing required parameters)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized (invalid app key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+    post:
+      tags:
+        - Comment
+      summary: Create or like comment
+      description: Creates a new comment or likes an existing comment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCommentRequest"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (invalid parameters)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized (invalid app key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  # Clipboard API
+  /clipboard/{id}:
+    get:
+      tags:
+        - Clipboard
+      summary: Get clipboard by ID
+      description: Returns clipboard content for the specified ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Clipboard ID
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing ID)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          description: Clipboard not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /clipboard/openid/{openid}:
+    post:
+      tags:
+        - Clipboard
+      summary: Get clipboard by OpenID
+      description: Returns clipboard content for the specified OpenID
+      parameters:
+        - name: openid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: WeChat OpenID
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing OpenID)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /clipboard:
+    post:
+      tags:
+        - Clipboard
+      summary: Save clipboard content
+      description: Saves clipboard content for a specific ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveClipboardRequest"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing required fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          description: Clipboard not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /clipboard/wx/{code}:
+    get:
+      tags:
+        - Clipboard
+      summary: Get clipboard by WeChat code
+      description: Returns clipboard content for the specified WeChat code. If not found, creates a new clipboard.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          description: WeChat authorization code
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing code)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized (failed to get WeChat session)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  # Coze API
+  /coze/token:
+    get:
+      tags:
+        - Coze
+      summary: Get Coze access token
+      description: Retrieves an access token for Coze API using OAuth JWT authentication
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing configuration)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  # Blog API
+  /blog-view:
+    get:
+      tags:
+        - Blog
+      summary: Record blog view
+      description: Records a blog visit with millisecond-level timestamp for the specified blog ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Blog ID to record view for
+      responses:
+        "200":
+          description: View recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing id parameter)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error (failed to record view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /popular-posts:
+    get:
+      tags:
+        - Blog
+      summary: Get popular posts
+      description: Returns a list of popular blog posts based on view count within the specified time period
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+          description: Number of days to look back for popular posts (default is 30)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Maximum number of popular posts to return (default is 10)
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error (failed to get popular posts)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  # Config API
+  /config:
+    get:
+      tags:
+        - Config
+      summary: Get configuration
+      description: Retrieves configuration from JSON file based on the provided key
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Configuration key (filename without .json extension)
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing key parameter)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          description: Configuration not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error (failed to read or parse JSON)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+components:
+  schemas:
+    # Common response structure
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        message:
+          type: string
+          description: Response message (for success/error)
+        payload:
+          oneOf:
+            - type: object
+              description: Response data (for data success)
+            - $ref: "#/components/schemas/CozeTokenResponse"
+            - $ref: "#/components/schemas/PopularPostsResponse"
+          description: Response data (for data success)
+      example:
+        success: true
+        payload: {}
+        message: ""
+
+    # Email API schemas
+    EmailRequest:
+      type: object
+      required:
+        - key
+        - content
+      properties:
+        key:
+          type: string
+          description: Authentication key for email service
+        subject:
+          type: string
+          description: Email subject
+        content:
+          type: string
+          description: Email content
+        to:
+          type: string
+          description: Recipient email address (optional)
+      example:
+        key: "secret_key"
+        subject: "Test Email"
+        content: "This is a test email"
+        to: "user@example.com"
+
+    # Comment API schemas
+    PostCommentRequest:
+      type: object
+      required:
+        - type
+        - app
+        - key
+        - topic
+        - user
+      properties:
+        type:
+          type: integer
+          description: Comment type (0 for comment, 1 for like)
+        content:
+          type: string
+          description: Comment content (required for type 0)
+        app:
+          type: string
+          description: App ID
+        key:
+          type: string
+          description: App Key
+        topic:
+          type: string
+          description: Topic identifier
+        user:
+          type: string
+          description: User identifier
+        to:
+          type: string
+          description: Reply target user (optional)
+        toId:
+          type: string
+          description: Reply target comment ID (required for type 1)
+      example:
+        type: 0
+        content: "This is a comment"
+        app: "test_app"
+        key: "app_secret"
+        topic: "test_topic"
+        user: "user123"
+        to: "user456"
+        toId: "comment_id_123"
+
+    # Clipboard API schemas
+    SaveClipboardRequest:
+      type: object
+      required:
+        - _id
+        - content
+      properties:
+        _id:
+          type: string
+          description: Clipboard ID
+        content:
+          type: string
+          description: Clipboard content
+      example:
+        _id: "clipboard_123"
+        content: "Clipboard text content"
+
+    # Coze API schemas
+    CozeTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Coze API access token
+        token_type:
+          type: string
+          description: Token type (usually "Bearer")
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+      example:
+        access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        token_type: "Bearer"
+        expires_in: 900
+
+    # Blog API schemas
+    PopularPost:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Blog post ID
+        view_count:
+          type: integer
+          description: Number of views
+      example:
+        id: "blog_post_123"
+        view_count: 42
+
+    PopularPostsResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/PopularPost"
+      example:
+        - id: "blog_post_123"
+          view_count: 42
+        - id: "blog_post_456"
+          view_count: 28
