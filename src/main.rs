@@ -1,6 +1,7 @@
 use crate::after_startup::after_startup;
 use crate::controller::clipboard;
 use crate::controller::comment;
+use crate::controller::config;
 use crate::controller::coze;
 use crate::controller::email;
 use crate::controller::state;
@@ -46,7 +47,8 @@ async fn main() -> Result<()> {
                         web::get().to(clipboard::get_by_wx_code),
                     )
                     .route("/clipboard", web::post().to(clipboard::save_by_id))
-                    .route("/coze/token", web::post().to(coze::get_token))
+                    .route("/coze/token", web::get().to(coze::get_token))
+                    .route("/config", web::get().to(config::get_config))
                     .service(actix_files::Files::new("/doc", "swagger").index_file("index.html")),
             )
     })

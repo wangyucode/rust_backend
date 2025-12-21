@@ -292,7 +292,7 @@ paths:
 
   # Coze API
   /coze/token:
-    post:
+    get:
       tags:
         - Coze
       summary: Get Coze access token
@@ -312,6 +312,46 @@ paths:
                 $ref: "#/components/schemas/ApiResponse"
         "500":
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  # Config API
+  /config:
+    get:
+      tags:
+        - Config
+      summary: Get configuration
+      description: Retrieves configuration from JSON file based on the provided key
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Configuration key (filename without .json extension)
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing key parameter)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          description: Configuration not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error (failed to read or parse JSON)
           content:
             application/json:
               schema:
