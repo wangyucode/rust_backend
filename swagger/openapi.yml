@@ -317,6 +317,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
 
+  # Blog API
+  /blog-view:
+    get:
+      tags:
+        - Blog
+      summary: Record blog view
+      description: Records a blog visit with millisecond-level timestamp for the specified blog ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Blog ID to record view for
+      responses:
+        "200":
+          description: View recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing id parameter)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error (failed to record view)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
   # Config API
   /config:
     get:

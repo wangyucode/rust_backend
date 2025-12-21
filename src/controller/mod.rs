@@ -31,6 +31,7 @@ impl<T> ApiResponse<T> {
     }
 }
 
+pub mod blog;
 pub mod clipboard;
 pub mod comment;
 pub mod config;
