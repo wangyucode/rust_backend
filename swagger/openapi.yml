@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: WYCODE API Docs - OpenAPI 3.0
   description: This is wycode.cn 's Rust backend API doc based on the OpenAPI 3.0 specification.
-  version: 2025.12.7
+  version: 2025.12.21
   contact:
     name: 王郁
     email: wangyu@wycode.cn
@@ -12,24 +12,28 @@ servers:
   - url: https://wycode.cn/api/v1
 
 paths:
+  # System API
   /:
     get:
-      summary: Get service status
-      description: Returns the current state of the service
-      operationId: getState
+      tags:
+        - System
+      summary: Get system status
+      description: Returns the current system status and version information
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StateResponse"
+                $ref: "#/components/schemas/ApiResponse"
 
+  # Email API
   /email:
     post:
+      tags:
+        - Email
       summary: Send email
-      description: Sends an email using the configured SMTP server
-      operationId: sendEmail
+      description: Sends an email with the specified content
       requestBody:
         required: true
         content:
@@ -42,99 +46,92 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EmailResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "400":
-          description: Bad request
+          description: Bad request (missing required fields)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EmailResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "403":
-          description: Forbidden
+          description: Forbidden (invalid key)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EmailResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EmailResponse"
+                $ref: "#/components/schemas/ApiResponse"
 
+  # Wechat API
   /wechat/apps:
     get:
-      summary: Get wechat apps list
-      description: Returns the list of wechat apps
-      operationId: getApps
+      tags:
+        - Wechat
+      summary: Get all WeChat apps
+      description: Returns a list of all registered WeChat applications
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AppsResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiResponse"
 
+  # Comment API
   /comment:
     get:
+      tags:
+        - Comment
       summary: Get comments
-      description: Returns the list of comments for a specific app and topic
-      operationId: getComments
+      description: Returns a list of comments for a specific app and topic
       parameters:
         - name: a
           in: query
-          description: App ID
           required: true
           schema:
             type: string
+          description: App ID
         - name: k
           in: query
-          description: Authentication key
           required: true
           schema:
             type: string
+          description: App Key
         - name: t
           in: query
-          description: Topic
           required: true
           schema:
             type: string
+          description: Topic
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CommentsResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "400":
-          description: Bad request
+          description: Bad request (missing required parameters)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "401":
-          description: Unauthorized
+          description: Unauthorized (invalid app key)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiResponse"
 
     post:
-      summary: Post comment
-      description: Creates a new comment or likes an existing one
-      operationId: postComment
+      tags:
+        - Comment
+      summary: Create or like comment
+      description: Creates a new comment or likes an existing comment
       requestBody:
         required: true
         content:
@@ -147,87 +144,173 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CommentPostResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "400":
-          description: Bad request
+          description: Bad request (invalid parameters)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "401":
-          description: Unauthorized
+          description: Unauthorized (invalid app key)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiResponse"
 
+  # Clipboard API
   /clipboard/{id}:
     get:
+      tags:
+        - Clipboard
       summary: Get clipboard by ID
-      description: Returns clipboard content by its ID
-      operationId: getClipboardById
+      description: Returns clipboard content for the specified ID
       parameters:
         - name: id
           in: path
-          description: Clipboard ID
           required: true
           schema:
             type: string
+          description: Clipboard ID
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ClipboardResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "400":
-          description: Bad request
+          description: Bad request (missing ID)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiResponse"
         "404":
           description: Clipboard not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiResponse"
+
+  /clipboard/openid/{openid}:
+    post:
+      tags:
+        - Clipboard
+      summary: Get clipboard by OpenID
+      description: Returns clipboard content for the specified OpenID
+      parameters:
+        - name: openid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: WeChat OpenID
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing OpenID)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /clipboard:
+    post:
+      tags:
+        - Clipboard
+      summary: Save clipboard content
+      description: Saves clipboard content for a specific ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveClipboardRequest"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing required fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          description: Clipboard not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /clipboard/wx/{code}:
+    get:
+      tags:
+        - Clipboard
+      summary: Get clipboard by WeChat code
+      description: Returns clipboard content for the specified WeChat code. If not found, creates a new clipboard.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          description: WeChat authorization code
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request (missing code)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized (failed to get WeChat session)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
         "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiResponse"
 
 components:
   schemas:
-    StateResponse:
+    # Common response structure
+    ApiResponse:
       type: object
       properties:
-        data:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        message:
+          type: string
+          description: Response message (for success/error)
+        payload:
           type: object
-          properties:
-            state:
-              type: string
-              example: "UP"
-            time:
-              type: integer
-              format: int64
-              example: 1733612800000
-            uuid:
-              type: string
-              format: uuid
-              example: "550e8400-e29b-41d4-a716-446655440000"
-            version:
-              type: string
-              example: "1.0.0"
+          description: Response data (for data success)
+      example:
+        success: true
+        payload: {}
+        message: ""
 
+    # Email API schemas
     EmailRequest:
       type: object
       required:
@@ -236,114 +319,23 @@ components:
       properties:
         key:
           type: string
-          description: Authentication key
-          example: "your-secret-key"
+          description: Authentication key for email service
         subject:
           type: string
-          description: Email subject (optional)
-          example: "Test Email"
+          description: Email subject
         content:
           type: string
           description: Email content
-          example: "This is a test email from Rust Backend"
         to:
           type: string
-          description: Recipient email (optional)
-          example: "recipient@example.com"
+          description: Recipient email address (optional)
+      example:
+        key: "secret_key"
+        subject: "Test Email"
+        content: "This is a test email"
+        to: "user@example.com"
 
-    EmailResponse:
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            state:
-              type: string
-              example: "ok"
-
-    App:
-      type: object
-      properties:
-        appid:
-          type: string
-          description: Wechat app ID
-          example: "wx1234567890abcdef"
-        name:
-          type: string
-          description: App name
-          example: "Test App"
-        img:
-          type: string
-          description: App image URL
-          example: "https://example.com/app.jpg"
-        note:
-          type: string
-          description: App description
-          example: "This is a test wechat app"
-
-    AppsResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: "#/components/schemas/App"
-
-    ErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          description: Error message
-          example: "Internal server error"
-
-    ToResponse:
-      type: object
-      properties:
-        content:
-          type: string
-          description: Comment content being replied to
-          example: "This is a great post!"
-        user:
-          type: string
-          description: User being replied to
-          example: "user@example.com"
-
-    CommentResponse:
-      type: object
-      properties:
-        _id:
-          type: string
-          description: Comment ID
-          example: "550e8400-e29b-41d4-a716-446655440000"
-        content:
-          type: string
-          description: Comment content
-          example: "This is a comment"
-        user:
-          type: string
-          description: Comment author
-          example: "user@example.com"
-        like:
-          type: integer
-          description: Number of likes
-          example: 0
-        createTime:
-          type: string
-          description: Creation time
-          example: "2025/12/18 12:00:00"
-        to:
-          $ref: "#/components/schemas/ToResponse"
-          description: Reply information (optional)
-
-    CommentsResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: "#/components/schemas/CommentResponse"
-
+    # Comment API schemas
     PostCommentRequest:
       type: object
       required:
@@ -355,66 +347,51 @@ components:
       properties:
         type:
           type: integer
-          description: "Comment type (0: comment, 1: like)"
-          example: 0
+          description: Comment type (0 for comment, 1 for like)
         content:
           type: string
           description: Comment content (required for type 0)
-          example: "This is a new comment"
         app:
           type: string
           description: App ID
-          example: "test-app"
         key:
           type: string
-          description: Authentication key
-          example: "your-secret-key"
+          description: App Key
         topic:
           type: string
-          description: Topic
-          example: "general"
+          description: Topic identifier
         user:
           type: string
-          description: Comment author
-          example: "user@example.com"
+          description: User identifier
         to:
           type: string
-          description: Reply to user (optional)
-          example: "another-user@example.com"
+          description: Reply target user (optional)
         toId:
           type: string
-          description: Reply to comment ID (optional)
-          example: "550e8400-e29b-41d4-a716-446655440000"
+          description: Reply target comment ID (required for type 1)
+      example:
+        type: 0
+        content: "This is a comment"
+        app: "test_app"
+        key: "app_secret"
+        topic: "test_topic"
+        user: "user123"
+        to: "user456"
+        toId: "comment_id_123"
 
-    CommentPostResponse:
+    # Clipboard API schemas
+    SaveClipboardRequest:
       type: object
+      required:
+        - _id
+        - content
       properties:
-        data:
+        _id:
           type: string
-          description: Created comment ID or updated count
-          example: "550e8400-e29b-41d4-a716-446655440000"
-
-    ClipboardResponse:
-      type: object
-      properties:
-        data:
-          type: object
-          properties:
-            _id:
-              type: string
-              description: Clipboard ID
-              example: "clipboard-123"
-            content:
-              type: string
-              description: Clipboard content
-              example: "This is some clipboard content"
-            createDate:
-              type: integer
-              format: int64
-              description: Creation timestamp
-              example: 1733612800000
-            lastUpdate:
-              type: integer
-              format: int64
-              description: Last update timestamp
-              example: 1733612900000
+          description: Clipboard ID
+        content:
+          type: string
+          description: Clipboard content
+      example:
+        _id: "clipboard_123"
+        content: "Clipboard text content"

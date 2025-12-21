@@ -32,6 +32,15 @@ async fn main() -> Result<()> {
                     .route("/comment", web::get().to(comment::get_comments))
                     .route("/comment", web::post().to(comment::post_comment))
                     .route("/clipboard/{id}", web::get().to(clipboard::get_by_id))
+                    .route(
+                        "/clipboard/openid/{openid}",
+                        web::post().to(clipboard::get_by_openid),
+                    )
+                    .route(
+                        "/clipboard/wx/{code}",
+                        web::get().to(clipboard::get_by_wx_code),
+                    )
+                    .route("/clipboard", web::post().to(clipboard::save_by_id))
                     .service(actix_files::Files::new("/doc", "swagger").index_file("index.html")),
             )
     })
