@@ -1,16 +1,16 @@
 # ======================== 构建阶段 ========================
-# 使用官方的 rust alpine 镜像作为构建环境
-FROM rust:1.92-alpine3.20 AS builder
+# 使用 Debian-based Rust 镜像，避免 musl 动态链接问题
+FROM rust:1.92-slim-bullseye AS builder
 
 # 设置工作目录
 WORKDIR /app
 
-# 安装 Alpine 系统依赖（编译 Rust 项目所需）
-# musl-dev: 提供 musl libc 开发库，适配 Alpine
-# openssl-dev: 满足 reqwest/sqlx 等库的 TLS 需求
-# sqlite-dev: sqlx sqlite 驱动依赖
-# pkgconfig: 用于检测系统库
-RUN apk add --no-cache musl-dev openssl-dev sqlite-dev pkgconfig
+# 安装构建依赖（Debian 包管理）
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # 先复制 Cargo.toml 和 Cargo.lock，利用 Docker 缓存
 COPY Cargo.toml Cargo.lock ./
@@ -29,21 +29,22 @@ COPY src ./src
 RUN cargo build --release
 
 # ======================== 运行阶段 ========================
-# 使用纯净的 alpine 镜像作为运行环境
-FROM alpine:3.20
+# 使用更小的 Debian 运行时镜像
+FROM debian:bullseye-slim
 
 # 安装运行时依赖
-# openssl: reqwest/sqlx 运行时需要
-# sqlite-libs: sqlite 运行时库
-# ca-certificates: HTTPS 请求需要的 CA 证书
-# tzdata: 解决 chrono 时区问题
-RUN apk add --no-cache openssl sqlite-libs ca-certificates tzdata
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl1.1 \
+    libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/*
 
-# 设置时区（根据你的需求调整，这里用上海时区）
+# 设置时区
 ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 创建非 root 用户（安全最佳实践）
-RUN addgroup -S rustapp && adduser -S rustapp -G rustapp
+RUN groupadd -r rustapp && useradd -r -g rustapp rustapp
 USER rustapp
 
 # 设置工作目录
