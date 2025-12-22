@@ -53,3 +53,16 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Deploy to server
+        if: github.event_name != 'pull_request'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: "wycode.cn"
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            docker pull wangyucode/rust_backend:${{ steps.extract-version.outputs.VERSION }}
+            cd /root/docker/
+            docker compose up -d --force-recreate rust
+            docker image prune -f
