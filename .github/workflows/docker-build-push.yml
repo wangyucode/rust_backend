@@ -63,6 +63,7 @@ jobs:
           key: ${{ secrets.SERVER_KEY }}
           script: |
             docker pull wangyucode/rust_backend:${{ steps.extract-version.outputs.VERSION }}
+            docker pull wangyucode/rust_backend:latest
             cd /root/docker/
             docker compose up -d --force-recreate rust
             docker image prune -f
