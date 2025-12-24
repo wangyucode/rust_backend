@@ -17,27 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制 Cargo.toml 和 Cargo.lock
-COPY Cargo.toml Cargo.lock ./
-
-# 创建一个临时的 src/main.rs 文件（仅用于构建依赖）
-RUN mkdir -p src
-RUN echo 'fn main() { println!("Dummy main function"); }' > src/main.rs
-
-# 修改项目名称为 rust_backend_dependencies, 防止缓存实际项目编译结果
-RUN sed -i 's/rust_backend/rust_backend_dependencies/g' Cargo.toml
-
-# 构建项目（这将下载并编译所有依赖）
-RUN cargo build --release
-
-# 删除临时创建的 src/main.rs 文件
-RUN rm -rf src
-
-# 复制真实的源码
-COPY src ./src
-
-# 修改项目名称为 rust_backend，正式编译
-RUN sed -i 's/rust_backend_dependencies/rust_backend/g' Cargo.toml
+# 复制项目文件
+COPY Cargo.toml Cargo.lock src ./
 
 # 构建项目（--release 确保编译优化）
 RUN cargo build --release
@@ -55,11 +36,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
     tzdata \
     ca-certificates \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置时区（根据你的需求调整，这里用上海时区）
 ENV TZ=Asia/Shanghai
+ENV RUST_BACKTRACE=full
 
 # 创建非 root 用户（安全最佳实践）
 RUN groupadd -g 1000 rust && useradd -u 1000 -g rust -m -s /bin/bash rust
