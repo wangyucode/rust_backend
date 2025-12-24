@@ -49,6 +49,18 @@ pub async fn get_popular_posts(
 
 // 清理超过30天的访问记录
 pub async fn clean_old_visits(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    // 首先检查表是否存在
+    let table_exists = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='blog_visits'"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if table_exists == 0 {
+        // 表不存在，直接返回
+        return Ok(());
+    }
+
     // 计算30天前的时间戳（毫秒）
     let cutoff_time = chrono::Utc::now().timestamp_millis() - (30 * 24 * 60 * 60 * 1000);
 
