@@ -21,7 +21,7 @@ mod util;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
-    println!("🚀 服务器启动中...");
+    println!("🚀 服务器启动中，v{}", env!("CARGO_PKG_VERSION"));
     // 加载.env文件
     dotenv().ok();
     println!("🔧 环境变量APP_ENV: {:?}", env::var("APP_ENV"));

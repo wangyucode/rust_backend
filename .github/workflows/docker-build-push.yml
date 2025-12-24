@@ -62,8 +62,9 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
           script: |
-            docker pull wangyucode/rust_backend:${{ steps.extract-version.outputs.VERSION }}
-            docker pull wangyucode/rust_backend:latest
             cd /root/docker/
-            docker compose up -d --force-recreate rust
+            docker compose ps
+            RUST_BACKEND_VERSION=${{ steps.extract-version.outputs.VERSION }}
+            docker compose up -d --force-recreate --pull always rust
+            docker compose ps
             docker image prune -f

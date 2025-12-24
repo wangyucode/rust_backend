@@ -54,6 +54,11 @@ pub fn send_email(config: EmailConfig) -> Result<(), String> {
         return Ok(());
     }
 
+    // 生产环境下检查必要的配置
+    if mail_password.is_empty() {
+        return Err("MAIL_PASSWORD 环境变量未设置".to_string());
+    }
+
     let email = Message::builder()
         .from(
             config
