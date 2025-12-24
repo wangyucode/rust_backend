@@ -62,11 +62,14 @@ async fn main() -> Result<()> {
 
     // 绑定端口成功后，在服务器启动前创建异步任务执行业务逻辑
     println!("📡 服务器已绑定到0.0.0.0:8080");
+    println!("🚀 准备启动after_startup业务逻辑");
     tokio::spawn(async move {
+        println!("✅ 已创建异步任务执行after_startup业务逻辑");
         if let Err(e) = after_startup(&pool_for_after_startup).await {
             eprintln!("❌ 业务逻辑启动失败: {}", e);
         }
     });
+    println!("📋 after_startup业务逻辑已提交到异步任务");
 
     // 启动服务器并等待其完成
     server.run().await?;
