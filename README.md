@@ -75,14 +75,14 @@ This project uses SQLite as the database, with asynchronous database operations 
 
 ### 数据库文件 (Database File)
 
-- 数据库文件路径: `db/sqlite.db`
-- Database file path: `db/sqlite.db`
+- 数据库文件路径: `./db/sqlite.db`
+- Database file path: `./db/sqlite.db`
 
 ### 数据库迁移 (Database Migrations)
 
-数据库迁移文件存放在 `db/migrations/` 目录下，使用时间戳命名格式。
+数据库迁移文件存放在 `./db/migrations/` 目录下，使用时间戳命名格式。
 
-Database migration files are stored in the `db/migrations/` directory, using timestamp naming format.
+Database migration files are stored in the `./db/migrations/` directory, using timestamp naming format.
 
 - 初始化迁移文件: `20251217100000_init_tables.sql`
 - Initial migration file: `20251217100000_init_tables.sql`
