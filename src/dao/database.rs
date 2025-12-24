@@ -1,15 +1,15 @@
 use anyhow::Result;
-use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
-use std::env;
+use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions};
+use std::path::Path;
 use std::sync::Arc;
 
 /// 初始化数据库连接池 + 执行迁移
 pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
     // 从环境变量读取数据库URL
-    let db_file = env::var("DATABASE_FILE").expect("DATABASE_FILE 环境变量未设置");
+    let db_file = "./db/sqlite.db";
     // 文件不存在时，创建文件
-    if !std::path::Path::new(&db_file).exists() {
-        std::fs::create_dir_all(std::path::Path::new(&db_file).parent().unwrap())?;
+    if !Path::new(&db_file).exists() {
+        std::fs::create_dir_all(Path::new(&db_file).parent().unwrap())?;
         std::fs::File::create(&db_file)?;
     }
 
@@ -24,8 +24,14 @@ pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
     println!("✅ 数据库连接池初始化成功");
 
     // 执行迁移：加载migrations目录下的所有未执行脚本
-    sqlx::migrate!("db/migrations").run(&pool).await?;
-    println!("✅ 数据库迁移执行成功");
+    let migrations_dir = Path::new("./db/migrations");
+    if migrations_dir.exists() {
+        let migrator = Migrator::new(migrations_dir).await?;
+        migrator.run(&pool).await?;
+        println!("✅ 数据库迁移执行成功");
+    } else {
+        println!("⚠️  未找到迁移目录: {}", migrations_dir.display());
+    }
 
     Ok(Arc::new(pool))
 }

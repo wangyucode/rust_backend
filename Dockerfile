@@ -35,7 +35,6 @@ RUN rm -rf src
 
 # 复制真实的源码
 COPY src ./src
-RUN mkdir -p db/migrations
 
 # 修改项目名称为 rust_backend，正式编译
 RUN sed -i 's/rust_backend_dependencies/rust_backend/g' Cargo.toml
