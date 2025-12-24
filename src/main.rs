@@ -9,7 +9,6 @@ use crate::controller::state;
 use crate::controller::wechat;
 use crate::dao::database::init_database_pool;
 use actix_web::{App, HttpServer, web};
-use anyhow::Result;
 use dotenv::dotenv;
 use std::env;
 use std::sync::Arc;
@@ -20,18 +19,18 @@ mod dao;
 mod util;
 
 #[actix_web::main]
-async fn main() -> Result<()> {
+async fn main() -> std::io::Result<()> {
     println!("🚀 服务器启动中，v{}", env!("CARGO_PKG_VERSION"));
     // 加载.env文件
     dotenv().ok();
     println!("🔧 环境变量APP_ENV: {:?}", env::var("APP_ENV"));
 
     // 初始化数据库连接池
-    let pool = init_database_pool().await?;
+    let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
     let pool_for_after_startup = Arc::clone(&pool);
-    if let Err(e) = after_startup(&pool_for_after_startup).await {
-        eprintln!("❌ 业务逻辑启动失败: {}", e);
-    }
+    after_startup(&pool_for_after_startup)
+        .await
+        .expect("❌ 业务逻辑启动失败");
     println!("🟢 开始启动HTTP服务器");
     // 创建HTTP服务器
     HttpServer::new(move || {
@@ -63,7 +62,5 @@ async fn main() -> Result<()> {
     })
     .bind(("0.0.0.0", 8080))?
     .run()
-    .await?;
-
-    Ok(())
+    .await
 }
