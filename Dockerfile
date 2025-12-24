@@ -1,6 +1,6 @@
-# ======================== 缓存阶段 ========================
-# 使用官方的 rust 镜像作为构建环境（使用 bookworm 版本提供更好的兼容性）
-FROM rust:1.92 AS cache
+# ======================== 构建阶段 ========================
+# 使用官方的 rust 镜像作为构建环境
+FROM rust:1.92 AS builder
 
 # 设置环境变量以优化构建
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
@@ -18,11 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制项目文件
-COPY Cargo.toml Cargo.lock ./
-# 替换package中的version (匹配任何版本并只替换第一个)
-RUN sed -i '0,/version = "[0-9]\+\.[0-9]\+\.[0-9]\+"/s//version = "0.0.0"/' Cargo.toml
-# 修改项目名称
-RUN sed -i 's/rust_backend/rust_backend_cache/' Cargo.toml
+COPY Cargo.deps.toml Cargo.toml
 
 # 创建一个临时的 src/main.rs 文件（仅用于构建依赖）
 RUN mkdir -p src
@@ -31,11 +27,6 @@ RUN echo 'fn main() { println!("Dummy main function"); }' > src/main.rs
 RUN cargo build --release
 
 RUN rm -rf src Cargo.lock Cargo.toml
-
-# ======================== 构建阶段 ========================
-FROM cache AS builder
-
-WORKDIR /app
 
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
