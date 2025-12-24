@@ -18,7 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制项目文件
-COPY Cargo.toml Cargo.lock src ./
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
 
 # 构建项目（--release 确保编译优化）
 RUN cargo build --release
