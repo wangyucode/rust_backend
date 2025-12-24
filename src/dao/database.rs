@@ -24,7 +24,7 @@ pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
     println!("✅ 数据库连接池初始化成功");
 
     // 执行迁移：加载migrations目录下的所有未执行脚本
-    sqlx::migrate!("./db/migrations").run(&pool).await?;
+    sqlx::migrate!("db/migrations").run(&pool).await?;
     println!("✅ 数据库迁移执行成功");
 
     Ok(Arc::new(pool))

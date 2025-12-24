@@ -11,6 +11,7 @@ use crate::dao::database::init_database_pool;
 use actix_web::{App, HttpServer, web};
 use anyhow::Result;
 use dotenv::dotenv;
+use std::env;
 use std::sync::Arc;
 
 mod after_startup;
@@ -20,8 +21,10 @@ mod util;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
+    println!("🚀 服务器启动中...");
     // 加载.env文件
     dotenv().ok();
+    println!("🔧 环境变量APP_ENV: {:?}", env::var("APP_ENV"));
 
     // 初始化数据库连接池
     let pool = init_database_pool().await?;
@@ -55,10 +58,10 @@ async fn main() -> Result<()> {
                     .service(actix_files::Files::new("/doc", "swagger").index_file("index.html")),
             )
     })
-    .bind(("127.0.0.1", 8080))?;
+    .bind(("0.0.0.0", 8080))?;
 
     // 绑定端口成功后，在服务器启动前创建异步任务执行业务逻辑
-    println!("📡 服务器已绑定到127.0.0.1:8080，正在启动...");
+    println!("📡 服务器已绑定到0.0.0.0:8080，正在启动...");
     tokio::spawn(async move {
         if let Err(e) = after_startup(&pool_for_after_startup).await {
             eprintln!("❌ 业务逻辑启动失败: {}", e);

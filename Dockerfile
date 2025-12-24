@@ -1,60 +1,83 @@
 # ======================== 构建阶段 ========================
-# 使用 Debian-based Rust 镜像，避免 musl 动态链接问题
-FROM rust:1.92-slim-bullseye AS builder
+# 使用官方的 rust 镜像作为构建环境（使用 bookworm 版本提供更好的兼容性）
+FROM rust:1.92 AS builder
+
+# 设置环境变量以优化构建
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
+    CARGO_TERM_COLOR=always \
+    RUSTFLAGS="-C target-cpu=native"
 
 # 设置工作目录
 WORKDIR /app
 
-# 安装构建依赖（Debian 包管理）
-RUN apt-get update && apt-get install -y \
-    pkg-config \
+# 安装系统依赖（编译 Rust 项目所需）
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libsqlite3-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# 先复制 Cargo.toml 和 Cargo.lock，利用 Docker 缓存
+# 复制 Cargo.toml 和 Cargo.lock
 COPY Cargo.toml Cargo.lock ./
 
-# 创建一个空的 src/main.rs 来预编译依赖（缓存优化）
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs
+# 创建一个临时的 src/main.rs 文件（仅用于构建依赖）
+RUN mkdir -p src
+RUN echo 'fn main() { println!("Dummy main function"); }' > src/main.rs
 
-# 构建依赖（--release 确保编译优化）
+# 修改项目名称为 rust_backend_dependencies, 防止缓存实际项目编译结果
+RUN sed -i 's/rust_backend/rust_backend_dependencies/g' Cargo.toml
+
+# 构建项目（这将下载并编译所有依赖）
 RUN cargo build --release
 
-# 删除空的 main.rs，复制真实的源码
+# 删除临时创建的 src/main.rs 文件
 RUN rm -rf src
-COPY src ./src
 
-# 重新构建项目（此时依赖已缓存，仅编译源码）
+# 复制真实的源码
+COPY src ./src
+RUN mkdir -p db/migrations
+
+# 修改项目名称为 rust_backend，正式编译
+RUN sed -i 's/rust_backend_dependencies/rust_backend/g' Cargo.toml
+
+# 构建项目（--release 确保编译优化）
 RUN cargo build --release
 
 # ======================== 运行阶段 ========================
-# 使用更小的 Debian 运行时镜像
-FROM debian:bullseye-slim
-
-# 安装运行时依赖
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl1.1 \
-    libsqlite3-0 \
-    && rm -rf /var/lib/apt/lists/*
-
-# 设置时区
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-# 创建非 root 用户（安全最佳实践）
-RUN groupadd -r rustapp && useradd -r -g rustapp rustapp
-USER rustapp
+# 使用 Debian trixie-slim 镜像作为运行环境（更小的镜像体积，适合生产环境）
+FROM debian:trixie-slim
 
 # 设置工作目录
 WORKDIR /app
 
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl3 \
+    libsqlite3-0 \
+    tzdata \
+    ca-certificates \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置时区（根据你的需求调整，这里用上海时区）
+ENV TZ=Asia/Shanghai
+
+# 创建非 root 用户（安全最佳实践）
+RUN groupadd -g 1000 rust && useradd -u 1000 -g rust -m -s /bin/bash rust
+USER rust
+
 # 从构建阶段复制编译好的二进制文件
-COPY --from=builder /app/target/release/rust_backend ./
+COPY --from=builder --chown=rust:rust /app/target/release/rust_backend ./
+
+# 复制必要的静态资源
+COPY --chown=rust:rust swagger ./swagger
 
 # 暴露端口（根据你的 actix-web 服务端口调整，默认 8080）
 EXPOSE 8080
+
+# 添加健康检查（使用应用现有的state端点）
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -qO- http://localhost:8080/api/v1/ || exit 1
 
 # 设置启动命令
 CMD ["./rust_backend"]
