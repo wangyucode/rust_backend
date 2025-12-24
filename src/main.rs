@@ -29,7 +29,6 @@ async fn main() -> Result<()> {
     // 初始化数据库连接池
     let pool = init_database_pool().await?;
     let pool_for_after_startup = Arc::clone(&pool);
-
     // 创建HTTP服务器
     let server = HttpServer::new(move || {
         App::new()
@@ -60,18 +59,16 @@ async fn main() -> Result<()> {
     })
     .bind(("0.0.0.0", 8080))?;
 
-    // 绑定端口成功后，在服务器启动前创建异步任务执行业务逻辑
+    // 绑定端口成功后，执行启动业务逻辑
     println!("📡 服务器已绑定到0.0.0.0:8080");
-    println!("🚀 准备启动after_startup业务逻辑");
-    tokio::spawn(async move {
-        println!("✅ 已创建异步任务执行after_startup业务逻辑");
-        if let Err(e) = after_startup(&pool_for_after_startup).await {
-            eprintln!("❌ 业务逻辑启动失败: {}", e);
-        }
-    });
-    println!("📋 after_startup业务逻辑已提交到异步任务");
+    println!("🚀 开始执行after_startup业务逻辑");
+
+    if let Err(e) = after_startup(&pool_for_after_startup).await {
+        eprintln!("❌ 业务逻辑启动失败: {}", e);
+    }
 
     // 启动服务器并等待其完成
+    println!("🟢 开始启动HTTP服务器");
     server.run().await?;
 
     Ok(())
