@@ -47,17 +47,24 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
         }
     });
 
+    // 监控定时清理任务的状态，但不使用unwrap_err()
     tokio::spawn(async move {
-        let e = cleanup_handle.await.unwrap_err();
-        eprintln!("❌ 定时清理任务 panic: {:?}", e);
+        let result = cleanup_handle.await;
+        match result {
+            Err(e) => {
+                eprintln!("❌ 定时清理任务结束并返回错误: {:?}", e);
+            }
+            Ok(_) => {
+                eprintln!("❌ 定时清理任务意外结束");
+            }
+        }
     });
     println!("✅ 定时清理任务创建完成");
 
     // 发送启动通知邮件
     println!("📧 开始准备发送启动通知邮件");
     let start_notification = format!(
-        "Rust后端服务已成功启动！\n\n时间：{}\n版本：{}\n\n数据库表信息：\n{}",
-        Local::now().to_string(),
+        "Rust后端服务已成功启动！\n\n版本：{}\n\n数据库表信息：\n{}",
         env!("CARGO_PKG_VERSION"),
         tables_info
     );

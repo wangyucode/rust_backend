@@ -28,9 +28,13 @@ async fn main() -> std::io::Result<()> {
     // 初始化数据库连接池
     let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
     let pool_for_after_startup = Arc::clone(&pool);
-    after_startup(&pool_for_after_startup)
-        .await
-        .expect("❌ 业务逻辑启动失败");
+    match after_startup(&pool_for_after_startup).await {
+        Ok(_) => println!("✅ 业务逻辑启动成功"),
+        Err(e) => {
+            eprintln!("❌ 业务逻辑启动失败: {:?}", e);
+            // 继续启动HTTP服务器，不因为业务逻辑失败而退出
+        }
+    };
     println!("🟢 开始启动HTTP服务器");
     // 创建HTTP服务器
     HttpServer::new(move || {
