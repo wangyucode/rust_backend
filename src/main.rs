@@ -44,8 +44,8 @@ async fn main() -> std::io::Result<()> {
                     .route("/", web::get().to(state::state))
                     .route("/email", web::post().to(email::send_email_handler))
                     .route("/wechat/apps", web::get().to(wechat::get_apps))
-                    // .route("/comment", web::get().to(comment::get_comments))
-                    // .route("/comment", web::post().to(comment::post_comment))
+                    .route("/comment", web::get().to(comment::get_comments))
+                    .route("/comment", web::post().to(comment::post_comment))
                     // .route("/clipboard/{id}", web::get().to(clipboard::get_by_id))
                     // .route(
                     //     "/clipboard/openid/{openid}",
@@ -60,7 +60,11 @@ async fn main() -> std::io::Result<()> {
                     // .route("/config", web::get().to(config::get_config))
                     // .route("/blog-view", web::get().to(blog::record_blog_view))
                     // .route("/popular-posts", web::get().to(blog::get_popular_posts))
-                    .service(actix_files::Files::new("/doc", "swagger").index_file("index.html")),
+                    .service(
+                        actix_files::Files::new("/doc", "swagger")
+                            .index_file("index.html")
+                            .redirect_to_slash_directory(),
+                    ),
             )
     })
     .bind(("0.0.0.0", 8080))?
