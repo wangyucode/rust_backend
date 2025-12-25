@@ -33,18 +33,23 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
     // 启动定时清理任务
     println!("⏰ 开始创建定时清理任务");
     let pool_for_cleanup = Arc::clone(pool);
-    tokio::spawn(async move {
-        println!("✅ 定时清理任务已创建，将每24小时执行一次");
-        // 每24小时执行一次清理
+
+    let cleanup_handle = tokio::spawn(async move {
+        println!("✅ 定时清理任务线程已启动");
         let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
 
-        // 定时执行清理
         loop {
             interval.tick().await;
+            println!("🕐 定时任务触发，开始执行清理...");
             if let Err(e) = clean_old_visits_task(&pool_for_cleanup).await {
                 eprintln!("❌ 清理旧访问记录失败: {}", e);
             }
         }
+    });
+
+    tokio::spawn(async move {
+        let e = cleanup_handle.await.unwrap_err();
+        eprintln!("❌ 定时清理任务 panic: {:?}", e);
     });
     println!("✅ 定时清理任务创建完成");
 
@@ -63,10 +68,13 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
     );
     println!("📧 邮件配置已准备完成，开始发送");
 
-    if let Err(e) = email::send_email(email_config) {
-        eprintln!("❌ 发送启动通知邮件失败：{}", e);
-    } else {
-        println!("✅ 已发送启动通知邮件");
+    match email::send_email(email_config) {
+        Ok(_) => {
+            println!("✅ 已发送启动通知邮件");
+        }
+        Err(e) => {
+            eprintln!("❌ 发送启动通知邮件失败：{}", e);
+        }
     }
     println!("📧 邮件发送流程完成");
     println!("🎉 after_startup 函数执行完成");

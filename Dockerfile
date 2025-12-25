@@ -68,7 +68,7 @@ EXPOSE 8080
 
 # 添加健康检查（使用应用现有的state端点）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -qO- http://localhost:8080/api/v1/ || exit 1
+    CMD curl -sS http://localhost:8080/api/v1/ || exit 1
 
 # 设置启动命令
 CMD ["./rust_backend"]

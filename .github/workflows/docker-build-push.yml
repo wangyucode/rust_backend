@@ -64,6 +64,7 @@ jobs:
           script: |
             cd /root/docker/
             docker compose ps
+            docker pull wangyucode/rust_backend:latest
             RUST_BACKEND_VERSION=${{ steps.extract-version.outputs.VERSION }} docker compose up -d --force-recreate --pull always rust
             sleep 10
             docker compose ps
