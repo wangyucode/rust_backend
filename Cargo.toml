@@ -1,6 +1,6 @@
 [package]
 name = "rust_backend"
-version = "0.1.19"
+version = "0.1.20"
 edition = "2024"
 authors = ["王郁 <wangyu@wycode.cn>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -26,7 +26,7 @@ async fn main() -> std::io::Result<()> {
     println!("🔧 环境变量APP_ENV: {:?}", env::var("APP_ENV"));
 
     // 初始化数据库连接池
-    // let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
+    let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
     // let pool_for_after_startup = Arc::clone(&pool);
     // match after_startup(&pool_for_after_startup).await {
     //     Ok(_) => println!("✅ 业务逻辑启动成功"),
@@ -38,12 +38,12 @@ async fn main() -> std::io::Result<()> {
     // 创建HTTP服务器
     HttpServer::new(move || {
         App::new()
-            // .app_data(web::Data::new(Arc::clone(&pool)))
+            .app_data(web::Data::new(Arc::clone(&pool)))
             .service(
                 web::scope("/api/v1")
                     .route("/", web::get().to(state::state))
-                    // .route("/email", web::post().to(email::send_email_handler))
-                    // .route("/wechat/apps", web::get().to(wechat::get_apps))
+                    .route("/email", web::post().to(email::send_email_handler))
+                    .route("/wechat/apps", web::get().to(wechat::get_apps))
                     // .route("/comment", web::get().to(comment::get_comments))
                     // .route("/comment", web::post().to(comment::post_comment))
                     // .route("/clipboard/{id}", web::get().to(clipboard::get_by_id))
