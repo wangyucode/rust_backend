@@ -2263,7 +2263,7 @@ dependencies = [
 
 [[package]]
 name = "rust_backend"
-version = "0.1.16"
+version = "0.1.17"
 dependencies = [
  "actix-files",
  "actix-web",
