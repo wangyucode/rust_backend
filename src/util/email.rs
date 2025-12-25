@@ -1,8 +1,51 @@
+use chrono::Utc;
+use lazy_static::lazy_static;
+use lettre::Tokio1Executor;
 use lettre::message::header::ContentType;
-use lettre::{Message, SmtpTransport, Transport};
+use lettre::{AsyncSmtpTransport, AsyncTransport, Message};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::env;
 use std::result::Result;
+use std::sync::Mutex;
 
+// 全局缓存，存储邮件内容哈希和发送时间戳（秒）
+lazy_static! {
+    static ref EMAIL_CACHE: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
+}
+
+// 生成邮件主题和内容的SHA256哈希值
+fn generate_email_hash(subject: &str, content: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(subject.as_bytes());
+    hasher.update(b"|"); // 使用分隔符确保不同组合的唯一性
+    hasher.update(content.as_bytes());
+    let result = hasher.finalize();
+    format!("{:x}", result)
+}
+
+// 清理过期的缓存条目（超过1小时的条目将被清理）
+fn cleanup_cache() -> Result<(), String> {
+    let now = Utc::now().timestamp();
+    let cleanup_threshold = 3600; // 清理超过1小时的缓存
+
+    let mut cache = EMAIL_CACHE
+        .lock()
+        .map_err(|_| "Failed to lock cache".to_string())?;
+
+    // 过滤出未过期的条目
+    let valid_entries: HashMap<String, i64> = cache
+        .drain()
+        .filter(|(_, timestamp)| now - timestamp < cleanup_threshold)
+        .collect();
+
+    // 将未过期的条目放回缓存
+    cache.extend(valid_entries);
+
+    Ok(())
+}
+
+#[derive(Clone)]
 pub struct EmailConfig {
     pub subject: String,
     pub content: String,
@@ -32,10 +75,36 @@ impl EmailConfig {
     }
 }
 
-pub fn send_email(config: EmailConfig) -> Result<(), String> {
+pub async fn send_email(config: EmailConfig) -> Result<(), String> {
     if config.content.is_empty() {
         return Err("content is required".to_string());
     }
+
+    let now = Utc::now().timestamp();
+    let throttle_duration = 60; // 1分钟节流
+
+    // 清理过期缓存
+    let _ = cleanup_cache();
+
+    // 生成邮件主题和内容的哈希
+    let email_hash = generate_email_hash(&config.subject, &config.content);
+
+    // 检查缓存
+    let mut cache = EMAIL_CACHE
+        .lock()
+        .map_err(|_| "Failed to lock cache".to_string())?;
+    if let Some(last_sent) = cache.get(&email_hash) {
+        if now - last_sent < throttle_duration {
+            println!(
+                "[节流] 邮件内容在{}秒内已发送，跳过本次发送",
+                throttle_duration
+            );
+            return Ok(());
+        }
+    }
+
+    // 更新缓存
+    cache.insert(email_hash.clone(), now);
 
     let mail_password = env::var("MAIL_PASSWORD").unwrap_or_default();
     let smtp_server = env::var("SMTP_SERVER").unwrap_or("smtp.qq.com".to_string());
@@ -75,7 +144,7 @@ pub fn send_email(config: EmailConfig) -> Result<(), String> {
         .body(config.content)
         .map_err(|e| format!("error creating email: {:?}", e))?;
 
-    let mailer = SmtpTransport::relay(&smtp_server)
+    let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&smtp_server)
         .map_err(|e| format!("error creating smtp transport: {:?}", e))?
         .credentials(lettre::transport::smtp::authentication::Credentials::new(
             config.from.clone(),
@@ -85,7 +154,8 @@ pub fn send_email(config: EmailConfig) -> Result<(), String> {
         .build();
 
     mailer
-        .send(&email)
+        .send(email)
+        .await
         .map_err(|e| format!("error sending email: {:?}", e))?;
 
     println!("Sent email to: {}", config.to);

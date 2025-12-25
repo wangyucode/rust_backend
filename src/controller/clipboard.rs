@@ -212,7 +212,7 @@ pub async fn get_by_wx_code(
                                     "剪贴板服务".to_string(),
                                     None,
                                 );
-                                if let Err(e) = send_email(email_config) {
+                                if let Err(e) = send_email(email_config).await {
                                     eprintln!("Error sending email: {:?}", e);
                                 }
 

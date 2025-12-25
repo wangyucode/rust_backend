@@ -68,7 +68,7 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
     );
     println!("📧 邮件配置已准备完成，开始发送");
 
-    match email::send_email(email_config) {
+    match email::send_email(email_config).await {
         Ok(_) => {
             println!("✅ 已发送启动通知邮件");
         }

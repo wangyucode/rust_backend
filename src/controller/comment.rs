@@ -199,7 +199,7 @@ pub async fn post_comment(
                                 Some(format!("新评论通知: {} - {}", comment.app, comment.topic)),
                                 email_content,
                                 None,
-                            )) {
+                            )).await {
                                 eprintln!("Failed to send email: {:?}", e);
                             }
 

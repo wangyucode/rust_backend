@@ -30,7 +30,7 @@ pub async fn send_email_handler(req: web::Json<EmailRequest>) -> impl Responder 
     let config = EmailConfig::new(req.subject.clone(), req.content.clone(), req.to.clone());
 
     // 发送邮件
-    match send_email(config) {
+    match send_email(config).await {
         Ok(_) => HttpResponse::Ok().json(ApiResponse::<()>::message_success("ok".to_string())),
         Err(e) => {
             eprintln!("Error sending email: {:?}", e);

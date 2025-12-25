@@ -60,7 +60,11 @@ async fn main() -> std::io::Result<()> {
                     .service(actix_files::Files::new("/doc", "swagger").index_file("index.html")),
             )
     })
-    .bind(("0.0.0.0", 8080))?
+    .bind(("0.0.0.0", 8080))
+    .map_err(|e| {
+        eprintln!("❌ HTTP服务器绑定失败: {}", e);
+        e
+    })?
     .run()
     .await
 }
