@@ -66,5 +66,14 @@ async fn main() -> std::io::Result<()> {
     println!("🔗 HTTP服务器绑定地址: http://0.0.0.0:8080");
     let server = server.bind(("0.0.0.0", 8080)).unwrap();
     println!("🟢 HTTP服务器启动成功");
-    server.run().await
+    match server.run().await {
+        Ok(_) => {
+            println!("✅ HTTP服务器正常关闭");
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("❌ HTTP服务器运行失败: {:?}", e);
+            Err(e)
+        }
+    }
 }
