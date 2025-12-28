@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
     // };
     println!("🟢 开始启动HTTP服务器");
     // 创建HTTP服务器
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(Arc::clone(&pool)))
             .service(
@@ -66,8 +66,27 @@ async fn main() -> std::io::Result<()> {
                             .redirect_to_slash_directory(),
                     ),
             )
-    })
-    .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+    });
+
+    let port = env::var("PORT")
+        .unwrap_or_else(|_| "8080".to_string())
+        .parse::<u16>()
+        .unwrap_or(8080);
+    println!("尝试绑定端口: {}", port);
+
+    match server.bind(("0.0.0.0", port)) {
+        Ok(server) => {
+            println!("✅ 端口 {} 绑定成功，服务器开始运行", port);
+            match server.run().await {
+                Ok(_) => println!("🛑 服务器已停止"),
+                Err(e) => eprintln!("❌ 服务器运行异常: {}", e),
+            }
+        }
+        Err(e) => {
+            eprintln!("❌ 端口 {} 绑定失败: {}", port, e);
+            return Err(e);
+        }
+    }
+
+    Ok(())
 }
