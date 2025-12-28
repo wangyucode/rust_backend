@@ -15,7 +15,7 @@ use dotenv::dotenv;
 use sqlx::SqlitePool;
 use std::env;
 use std::sync::Arc;
-use tower_http::services::ServeDir;
+use tower_http::{catch_panic::CatchPanicLayer, services::ServeDir};
 
 mod after_startup;
 mod controller;
@@ -30,6 +30,14 @@ async fn main() -> std::io::Result<()> {
 
     // 初始化数据库连接池
     let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
+
+    // 检查 swagger 目录是否存在 (调试用途)
+    if let Err(e) = tokio::fs::metadata("swagger").await {
+        eprintln!("⚠️ 严重警告: 无法访问 'swagger' 目录: {}。访问 /doc 可能会导致错误。", e);
+    } else {
+        println!("✅ 'swagger' 目录检查通过");
+    }
+
     let pool_for_after_startup = Arc::clone(&pool);
     match after_startup::after_startup(&pool_for_after_startup).await {
         Ok(_) => println!("✅ 业务逻辑启动成功"),
@@ -69,7 +77,8 @@ async fn main() -> std::io::Result<()> {
     // 组装应用
     let app = Router::default()
         .nest("/api/v1", api_routes)
-        .with_state(pool);
+        .with_state(pool)
+        .layer(CatchPanicLayer::new());
 
     let port = env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())
