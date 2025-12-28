@@ -14,23 +14,20 @@ pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
     }
 
     let db_url = format!("sqlite://{}", db_file);
-    println!("📁 数据库连接URL: {}", db_url);
 
     // 创建连接池
     let pool = SqlitePoolOptions::new()
         .max_connections(4)
         .connect(&db_url)
         .await?;
-    println!("✅ 数据库连接池初始化成功");
 
     // 执行迁移：加载migrations目录下的所有未执行脚本
     let migrations_dir = Path::new("./db/migrations");
     if migrations_dir.exists() {
         let migrator = Migrator::new(migrations_dir).await?;
         migrator.run(&pool).await?;
-        println!("✅ 数据库迁移执行成功");
     } else {
-        println!("⚠️  未找到迁移目录: {}", migrations_dir.display());
+        eprintln!("⚠️  未找到迁移目录: {}", migrations_dir.display());
     }
 
     Ok(Arc::new(pool))

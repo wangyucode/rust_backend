@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, Responder};
+use axum::response::{IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,7 +12,7 @@ struct DataResult {
     version: String,
 }
 
-pub async fn state() -> impl Responder {
+pub async fn state() -> impl IntoResponse {
     let data = DataResult {
         state: "UP".to_string(),
         time: std::time::SystemTime::now()
@@ -22,5 +22,5 @@ pub async fn state() -> impl Responder {
         uuid: Uuid::new_v4().to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
     };
-    HttpResponse::Ok().json(ApiResponse::data_success(data))
+    Json(ApiResponse::data_success(data))
 }

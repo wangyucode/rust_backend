@@ -90,21 +90,23 @@ pub async fn send_email(config: EmailConfig) -> Result<(), String> {
     let email_hash = generate_email_hash(&config.subject, &config.content);
 
     // 检查缓存
-    let mut cache = EMAIL_CACHE
-        .lock()
-        .map_err(|_| "Failed to lock cache".to_string())?;
-    if let Some(last_sent) = cache.get(&email_hash) {
-        if now - last_sent < throttle_duration {
-            println!(
-                "[节流] 邮件内容在{}秒内已发送，跳过本次发送",
-                throttle_duration
-            );
-            return Ok(());
+    {
+        let mut cache = EMAIL_CACHE
+            .lock()
+            .map_err(|_| "Failed to lock cache".to_string())?;
+        if let Some(last_sent) = cache.get(&email_hash) {
+            if now - last_sent < throttle_duration {
+                println!(
+                    "[节流] 邮件内容在{}秒内已发送，跳过本次发送",
+                    throttle_duration
+                );
+                return Ok(());
+            }
         }
-    }
 
-    // 更新缓存
-    cache.insert(email_hash.clone(), now);
+        // 更新缓存
+        cache.insert(email_hash.clone(), now);
+    }
 
     let mail_password = env::var("MAIL_PASSWORD").unwrap_or_default();
     let smtp_server = env::var("SMTP_SERVER").unwrap_or("smtp.qq.com".to_string());

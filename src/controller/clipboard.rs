@@ -1,4 +1,9 @@
-use actix_web::{HttpResponse, Responder, web};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::{IntoResponse, Json},
+    Json as AxumJson,
+};
 use rand;
 use sqlx::SqlitePool;
 use std::env;
@@ -7,8 +12,8 @@ use std::sync::Arc;
 use super::ApiResponse;
 use super::wechat::get_wechat_session;
 use crate::dao::clipboard::{
-    Clipboard, ClipboardResponse, get_clipboard_by_id, get_clipboard_by_openid,
-    get_single_clipboard_by_openid, insert_clipboard, update_clipboard_by_id,
+    get_clipboard_by_id, get_clipboard_by_openid, get_single_clipboard_by_openid, insert_clipboard,
+    update_clipboard_by_id, Clipboard, ClipboardResponse,
 };
 use crate::util::email::{EmailConfig, send_email};
 use crate::util::uuid::generate_short_uuid;
@@ -51,13 +56,16 @@ fn to_response(clipboard: Clipboard) -> ClipboardResponse {
 
 // 根据id获取剪贴板内容的处理函数
 pub async fn get_by_id(
-    pool: web::Data<Arc<SqlitePool>>,
-    path: web::Path<ClipboardPath>,
-) -> impl Responder {
+    State(pool): State<Arc<SqlitePool>>,
+    Path(path): Path<ClipboardPath>,
+) -> impl IntoResponse {
     // 验证id参数
     if path.id.is_empty() {
-        return HttpResponse::BadRequest()
-            .json(ApiResponse::<()>::error("id required".to_string()));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("id required".to_string())),
+        )
+            .into_response();
     }
 
     // 获取剪贴板内容
@@ -65,27 +73,38 @@ pub async fn get_by_id(
         Ok(Some(clipboard)) => {
             // 转换为响应格式
             let response = to_response(clipboard);
-            HttpResponse::Ok().json(ApiResponse::data_success(response))
+            Json(ApiResponse::data_success(response)).into_response()
         }
-        Ok(None) => HttpResponse::NotFound().json(ApiResponse::<()>::error("未找到".to_string())),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error("未找到".to_string())),
+        )
+            .into_response(),
         Err(e) => {
             eprintln!("Error getting clipboard: {:?}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                "Failed to get clipboard content".to_string(),
-            ))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "Failed to get clipboard content".to_string(),
+                )),
+            )
+                .into_response()
         }
     }
 }
 
 // 根据openid获取剪贴板内容的处理函数
 pub async fn get_by_openid(
-    pool: web::Data<Arc<SqlitePool>>,
-    path: web::Path<ClipboardOpenidPath>,
-) -> impl Responder {
+    State(pool): State<Arc<SqlitePool>>,
+    Path(path): Path<ClipboardOpenidPath>,
+) -> impl IntoResponse {
     // 验证openid参数
     if path.openid.is_empty() {
-        return HttpResponse::BadRequest()
-            .json(ApiResponse::<()>::error("openid required".to_string()));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("openid required".to_string())),
+        )
+            .into_response();
     }
 
     // 获取剪贴板内容
@@ -93,26 +112,33 @@ pub async fn get_by_openid(
         Ok(clipboards) => {
             // 转换为响应格式
             let responses: Vec<_> = clipboards.into_iter().map(to_response).collect();
-            HttpResponse::Ok().json(ApiResponse::data_success(responses))
+            Json(ApiResponse::data_success(responses)).into_response()
         }
         Err(e) => {
             eprintln!("Error getting clipboards by openid: {:?}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                "Failed to get clipboard content".to_string(),
-            ))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "Failed to get clipboard content".to_string(),
+                )),
+            )
+                .into_response()
         }
     }
 }
 
 // 保存剪贴板内容的处理函数
 pub async fn save_by_id(
-    pool: web::Data<Arc<SqlitePool>>,
-    body: web::Json<SaveClipboardRequest>,
-) -> impl Responder {
+    State(pool): State<Arc<SqlitePool>>,
+    AxumJson(body): AxumJson<SaveClipboardRequest>,
+) -> impl IntoResponse {
     // 验证id参数
     if body.id.is_empty() {
-        return HttpResponse::BadRequest()
-            .json(ApiResponse::<()>::error("_id required".to_string()));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("_id required".to_string())),
+        )
+            .into_response();
     }
 
     // 获取当前时间戳（毫秒）
@@ -125,41 +151,58 @@ pub async fn save_by_id(
             match get_clipboard_by_id(pool.as_ref(), &body.id).await {
                 Ok(Some(clipboard)) => {
                     let response = to_response(clipboard);
-                    HttpResponse::Ok().json(ApiResponse::data_success(response))
+                    Json(ApiResponse::data_success(response)).into_response()
                 }
-                Ok(None) => {
-                    HttpResponse::NotFound().json(ApiResponse::<()>::error("未找到".to_string()))
-                }
+                Ok(None) => (
+                    StatusCode::NOT_FOUND,
+                    Json(ApiResponse::<()>::error("未找到".to_string())),
+                )
+                    .into_response(),
                 Err(e) => {
                     eprintln!("Error getting updated clipboard: {:?}", e);
-                    HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                        "Failed to get updated clipboard content".to_string(),
-                    ))
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ApiResponse::<()>::error(
+                            "Failed to get updated clipboard content".to_string(),
+                        )),
+                    )
+                        .into_response()
                 }
             }
         }
         Ok(_) => {
             // 没有找到要更新的记录
-            HttpResponse::NotFound().json(ApiResponse::<()>::error("未找到".to_string()))
+            (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("未找到".to_string())),
+            )
+                .into_response()
         }
         Err(e) => {
             eprintln!("Error updating clipboard: {:?}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                "Failed to update clipboard content".to_string(),
-            ))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "Failed to update clipboard content".to_string(),
+                )),
+            )
+                .into_response()
         }
     }
 }
 
 // 根据微信code获取剪贴板内容的处理函数
 pub async fn get_by_wx_code(
-    pool: web::Data<Arc<SqlitePool>>,
-    path: web::Path<ClipboardWxCodePath>,
-) -> impl Responder {
+    State(pool): State<Arc<SqlitePool>>,
+    Path(path): Path<ClipboardWxCodePath>,
+) -> impl IntoResponse {
     // 验证code参数
     if path.code.is_empty() {
-        return HttpResponse::BadRequest()
-            .json(ApiResponse::<()>::error("code required".to_string()));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("code required".to_string())),
+        )
+            .into_response();
     }
 
     // 获取环境变量
@@ -176,7 +219,7 @@ pub async fn get_by_wx_code(
                     Ok(Some(clipboard)) => {
                         // 已存在，返回
                         let response = to_response(clipboard);
-                        HttpResponse::Ok().json(ApiResponse::data_success(response))
+                        Json(ApiResponse::data_success(response)).into_response()
                     }
                     Ok(None) => {
                         // 不存在，创建新的剪贴板
@@ -218,33 +261,49 @@ pub async fn get_by_wx_code(
 
                                 // 返回新创建的剪贴板
                                 let response = to_response(clipboard);
-                                HttpResponse::Ok().json(ApiResponse::data_success(response))
+                                Json(ApiResponse::data_success(response)).into_response()
                             }
                             Err(e) => {
                                 eprintln!("Error inserting clipboard: {:?}", e);
-                                HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                                    "Failed to create clipboard".to_string(),
-                                ))
+                                (
+                                    StatusCode::INTERNAL_SERVER_ERROR,
+                                    Json(ApiResponse::<()>::error(
+                                        "Failed to create clipboard".to_string(),
+                                    )),
+                                )
+                                    .into_response()
                             }
                         }
                     }
                     Err(e) => {
                         eprintln!("Error checking clipboard by openid: {:?}", e);
-                        HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                            "Failed to check clipboard".to_string(),
-                        ))
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(ApiResponse::<()>::error(
+                                "Failed to check clipboard".to_string(),
+                            )),
+                        )
+                            .into_response()
                     }
                 }
             } else {
                 // 没有获取到openid
-                HttpResponse::Unauthorized().json(ApiResponse::<()>::error("登录失败".to_string()))
+                (
+                    StatusCode::UNAUTHORIZED,
+                    Json(ApiResponse::<()>::error("登录失败".to_string())),
+                )
+                    .into_response()
             }
         }
         Err(e) => {
             eprintln!("Error getting wechat session: {:?}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                "Failed to get wechat session".to_string(),
-            ))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "Failed to get wechat session".to_string(),
+                )),
+            )
+                .into_response()
         }
     }
 }

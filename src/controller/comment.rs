@@ -1,4 +1,8 @@
-use actix_web::{HttpResponse, Responder, web};
+use axum::{
+    extract::{Json as AxumJson, Query, State},
+    http::StatusCode,
+    response::{IntoResponse, Json},
+};
 use chrono::{Local, TimeZone, Utc};
 use regex::Regex;
 use sqlx::SqlitePool;
@@ -7,8 +11,8 @@ use uuid::Uuid;
 
 use super::ApiResponse;
 use crate::dao::comment::{
-    Comment, CommentResponse, ToResponse, get_comments_by_app_topic, insert_comment,
-    update_comment_like, validate_app_key,
+    get_comments_by_app_topic, insert_comment, update_comment_like, validate_app_key, Comment,
+    CommentResponse, ToResponse,
 };
 use crate::util::email::{EmailConfig, send_email};
 
@@ -89,19 +93,30 @@ pub struct PostCommentBody {
 
 // 获取评论列表的处理函数
 pub async fn get_comments(
-    pool: web::Data<Arc<SqlitePool>>,
-    query: web::Query<CommentQuery>,
-) -> impl Responder {
+    State(pool): State<Arc<SqlitePool>>,
+    Query(query): Query<CommentQuery>,
+) -> impl IntoResponse {
     // 验证查询参数
     if query.a.is_empty() {
-        return HttpResponse::BadRequest().json(ApiResponse::<()>::error("a required".to_string()));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("a required".to_string())),
+        )
+            .into_response();
     }
     if query.k.is_empty() {
-        return HttpResponse::BadRequest().json(ApiResponse::<()>::error("k required".to_string()));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("k required".to_string())),
+        )
+            .into_response();
     }
     if query.t.is_empty() {
-        return HttpResponse::BadRequest()
-            .json(ApiResponse::<()>::error("topic required".to_string()));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("topic required".to_string())),
+        )
+            .into_response();
     }
 
     // 验证app和key
@@ -114,49 +129,68 @@ pub async fn get_comments(
                     let response_comments: Vec<CommentResponse> =
                         comments.iter().map(convert_to_response).collect();
 
-                    HttpResponse::Ok().json(ApiResponse::data_success(response_comments))
+                    Json(ApiResponse::data_success(response_comments)).into_response()
                 }
                 Err(e) => {
                     eprintln!("Error getting comments: {:?}", e);
-                    HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                        "Failed to get comments".to_string(),
-                    ))
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ApiResponse::<()>::error(
+                            "Failed to get comments".to_string(),
+                        )),
+                    )
+                        .into_response()
                 }
             }
         }
-        Ok(false) => {
-            HttpResponse::Unauthorized().json(ApiResponse::<()>::error("Unauthorized".to_string()))
-        }
+        Ok(false) => (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized".to_string())),
+        )
+            .into_response(),
         Err(e) => {
             eprintln!("Error validating app key: {:?}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                "Failed to validate app key".to_string(),
-            ))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "Failed to validate app key".to_string(),
+                )),
+            )
+                .into_response()
         }
     }
 }
 
 // 提交评论的处理函数
 pub async fn post_comment(
-    pool: web::Data<Arc<SqlitePool>>,
-    body: web::Json<PostCommentBody>,
-) -> impl Responder {
+    State(pool): State<Arc<SqlitePool>>,
+    AxumJson(body): AxumJson<PostCommentBody>,
+) -> impl IntoResponse {
     // 验证评论类型
     if body.c_type < 0 || body.c_type > 1 {
-        return HttpResponse::BadRequest()
-            .json(ApiResponse::<()>::error("评论类型不合法".to_string()));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("评论类型不合法".to_string())),
+        )
+            .into_response();
     }
 
     // 验证评论内容
     if body.c_type == 0 {
         if body.content.as_ref().map_or(true, |s| s.is_empty()) {
-            return HttpResponse::BadRequest()
-                .json(ApiResponse::<()>::error("内容不能为空".to_string()));
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::<()>::error("内容不能为空".to_string())),
+            )
+                .into_response();
         }
         if let Some(content) = &body.content {
             if content.len() > 1023 {
-                return HttpResponse::BadRequest()
-                    .json(ApiResponse::<()>::error("内容不能超过1000个字".to_string()));
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::<()>::error("内容不能超过1000个字".to_string())),
+                )
+                    .into_response();
             }
         }
     }
@@ -199,52 +233,74 @@ pub async fn post_comment(
                                 Some(format!("新评论通知: {} - {}", comment.app, comment.topic)),
                                 email_content,
                                 None,
-                            )).await {
+                            ))
+                            .await
+                            {
                                 eprintln!("Failed to send email: {:?}", e);
                             }
 
-                            HttpResponse::Ok().json(ApiResponse::data_success(inserted_id))
+                            Json(ApiResponse::data_success(inserted_id)).into_response()
                         }
                         Err(e) => {
                             eprintln!("Error inserting comment: {:?}", e);
-                            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                                "Failed to insert comment".to_string(),
-                            ))
+                            (
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                Json(ApiResponse::<()>::error(
+                                    "Failed to insert comment".to_string(),
+                                )),
+                            )
+                                .into_response()
                         }
                     }
                 }
                 // 点赞评论
                 1 => {
                     if body.to_id.is_none() || body.to_id.as_ref().unwrap().is_empty() {
-                        return HttpResponse::BadRequest()
-                            .json(ApiResponse::<()>::error("toId required".to_string()));
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(ApiResponse::<()>::error("toId required".to_string())),
+                        )
+                            .into_response();
                     }
 
                     let comment_id = body.to_id.as_ref().unwrap();
                     match update_comment_like(pool.as_ref(), comment_id).await {
                         Ok(modified_count) => {
-                            HttpResponse::Ok().json(ApiResponse::data_success(modified_count))
+                            Json(ApiResponse::data_success(modified_count)).into_response()
                         }
                         Err(e) => {
                             eprintln!("Error updating comment like: {:?}", e);
-                            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                                "Failed to update comment like".to_string(),
-                            ))
+                            (
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                Json(ApiResponse::<()>::error(
+                                    "Failed to update comment like".to_string(),
+                                )),
+                            )
+                                .into_response()
                         }
                     }
                 }
-                _ => HttpResponse::BadRequest()
-                    .json(ApiResponse::<()>::error("暂不支持".to_string())),
+                _ => (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::<()>::error("暂不支持".to_string())),
+                )
+                    .into_response(),
             }
         }
-        Ok(false) => {
-            HttpResponse::Unauthorized().json(ApiResponse::<()>::error("Unauthorized".to_string()))
-        }
+        Ok(false) => (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized".to_string())),
+        )
+            .into_response(),
         Err(e) => {
             eprintln!("Error validating app key: {:?}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                "Failed to validate app key".to_string(),
-            ))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "Failed to validate app key".to_string(),
+                )),
+            )
+                .into_response()
         }
     }
 }

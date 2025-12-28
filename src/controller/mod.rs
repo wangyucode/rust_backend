@@ -1,32 +1,34 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ApiResponse<T> {
-    DataSuccess { payload: T, success: bool },
-    MessageSuccess { message: String, success: bool },
-    Error { message: String, success: bool },
+pub struct ApiResponse<T> {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<T>,
 }
 
 impl<T> ApiResponse<T> {
-    pub fn data_success(payload: T) -> Self {
-        ApiResponse::DataSuccess {
-            payload,
-            success: true,
+    pub fn data_success(data: T) -> Self {
+        ApiResponse {
+            code: 0,
+            message: "success".to_string(),
+            data: Some(data),
         }
     }
 
     pub fn message_success(message: String) -> Self {
-        ApiResponse::MessageSuccess {
+        ApiResponse {
+            code: 0,
             message,
-            success: true,
+            data: None,
         }
     }
 
     pub fn error(message: String) -> Self {
-        ApiResponse::Error {
+        ApiResponse {
+            code: -1,
             message,
-            success: false,
+            data: None,
         }
     }
 }

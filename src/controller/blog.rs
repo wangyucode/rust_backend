@@ -1,4 +1,8 @@
-use actix_web::{HttpResponse, Responder, web};
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    response::{IntoResponse, Json},
+};
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::SqlitePool;
@@ -29,9 +33,9 @@ fn default_limit() -> i64 {
 }
 
 pub async fn record_blog_view(
-    pool: web::Data<Arc<SqlitePool>>,
-    query: web::Query<BlogViewQuery>,
-) -> impl Responder {
+    State(pool): State<Arc<SqlitePool>>,
+    Query(query): Query<BlogViewQuery>,
+) -> impl IntoResponse {
     let blog_id = query.id.clone();
 
     // 获取当前时间戳（毫秒）
@@ -41,18 +45,22 @@ pub async fn record_blog_view(
     let result = blog_dao::record_blog_visit(pool.as_ref(), &blog_id, timestamp).await;
 
     match result {
-        Ok(_) => HttpResponse::Ok().json(ApiResponse::<()>::message_success("success".to_string())),
+        Ok(_) => Json(ApiResponse::<()>::message_success("success".to_string())).into_response(),
         Err(e) => {
             eprintln!("Failed to record view: {:?}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error("failed".to_string()))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error("failed".to_string())),
+            )
+                .into_response()
         }
     }
 }
 
 pub async fn get_popular_posts(
-    pool: web::Data<Arc<SqlitePool>>,
-    query: web::Query<PopularPostsQuery>,
-) -> impl Responder {
+    State(pool): State<Arc<SqlitePool>>,
+    Query(query): Query<PopularPostsQuery>,
+) -> impl IntoResponse {
     // Ensure days doesn't exceed 30
     let days = query.days.min(30);
     let limit = query.limit;
@@ -61,12 +69,16 @@ pub async fn get_popular_posts(
     let result = blog_dao::get_popular_posts(pool.as_ref(), days, limit).await;
 
     match result {
-        Ok(posts) => HttpResponse::Ok().json(ApiResponse::data_success(posts)),
+        Ok(posts) => Json(ApiResponse::data_success(posts)).into_response(),
         Err(e) => {
             eprintln!("Failed to get popular posts: {:?}", e);
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::error(
-                "Failed to get popular posts".to_string(),
-            ))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "Failed to get popular posts".to_string(),
+                )),
+            )
+                .into_response()
         }
     }
 }

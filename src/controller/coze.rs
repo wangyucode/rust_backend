@@ -1,4 +1,6 @@
-use actix_web::{HttpResponse, Responder};
+use axum::{
+    response::{IntoResponse, Json},
+};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use reqwest::Client;
@@ -22,7 +24,7 @@ struct TokenRequest {
     scope: Option<String>,
 }
 
-pub async fn get_token() -> impl Responder {
+pub async fn get_token() -> impl IntoResponse {
     // 读取环境变量
     let app_id = env::var("COZE_APP_ID").expect("COZE_APP_ID must be set");
     let aud = "api.coze.cn";
@@ -94,5 +96,5 @@ pub async fn get_token() -> impl Responder {
         .await
         .expect("Failed to parse token response");
 
-    HttpResponse::Ok().json(ApiResponse::data_success(jwt_response))
+    Json(ApiResponse::data_success(jwt_response))
 }
