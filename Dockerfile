@@ -5,7 +5,7 @@ WORKDIR /app
 # Install build dependencies
 # musl-dev: for C compilation (needed by sqlite, ring, etc)
 # pkgconfig & openssl-dev: for native-tls
-RUN apk add --no-cache musl-dev pkgconfig openssl-dev
+RUN apk add --no-cache musl-dev pkgconfig openssl-dev openssl-libs-static
 
 # Create a dummy project to cache dependencies
 RUN mkdir src
