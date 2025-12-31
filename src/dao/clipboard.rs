@@ -42,24 +42,9 @@ pub async fn get_clipboard_by_id(
 pub async fn get_clipboard_by_openid(
     pool: &SqlitePool,
     openid: &str,
-) -> Result<Vec<Clipboard>, sqlx::Error> {
-    let clipboards = sqlx::query_as(
-        "SELECT id, content, openid, create_time, update_time FROM clipboard WHERE openid = ?",
-    )
-    .bind(openid)
-    .fetch_all(pool)
-    .await?;
-
-    Ok(clipboards)
-}
-
-// 根据openid获取单个剪贴板内容
-pub async fn get_single_clipboard_by_openid(
-    pool: &SqlitePool,
-    openid: &str,
 ) -> Result<Option<Clipboard>, sqlx::Error> {
     let clipboard = sqlx::query_as(
-        "SELECT id, content, openid, create_time, update_time FROM clipboard WHERE openid = ? LIMIT 1",
+        "SELECT id, content, openid, create_time, update_time FROM clipboard WHERE openid = ?",
     )
     .bind(openid)
     .fetch_optional(pool)
@@ -67,6 +52,7 @@ pub async fn get_single_clipboard_by_openid(
 
     Ok(clipboard)
 }
+
 
 // 根据id更新剪贴板内容
 pub async fn update_clipboard_by_id(

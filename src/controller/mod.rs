@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct ApiResponse<T> {
     pub success: bool,
     pub message: String,
-    pub data: Option<T>,
+    pub payload: Option<T>,
 }
 
 impl<T> ApiResponse<T> {
@@ -12,7 +12,7 @@ impl<T> ApiResponse<T> {
         ApiResponse {
             success: true,
             message: "success".to_string(),
-            data: Some(data),
+            payload: Some(data),
         }
     }
 
@@ -20,7 +20,7 @@ impl<T> ApiResponse<T> {
         ApiResponse {
             success: true,
             message,
-            data: None,
+            payload: None,
         }
     }
 
@@ -28,7 +28,7 @@ impl<T> ApiResponse<T> {
         ApiResponse {
             success: false,
             message,
-            data: None,
+            payload: None,
         }
     }
 }

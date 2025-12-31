@@ -12,7 +12,7 @@ use std::sync::Arc;
 use super::ApiResponse;
 use super::wechat::get_wechat_session;
 use crate::dao::clipboard::{
-    get_clipboard_by_id, get_clipboard_by_openid, get_single_clipboard_by_openid, insert_clipboard,
+    get_clipboard_by_id, get_clipboard_by_openid, insert_clipboard,
     update_clipboard_by_id, Clipboard, ClipboardResponse,
 };
 use crate::util::email::{EmailConfig, send_email};
@@ -109,11 +109,16 @@ pub async fn get_by_openid(
 
     // 获取剪贴板内容
     match get_clipboard_by_openid(pool.as_ref(), &path.openid).await {
-        Ok(clipboards) => {
+        Ok(Some(clipboard)) => {
             // 转换为响应格式
-            let responses: Vec<_> = clipboards.into_iter().map(to_response).collect();
-            Json(ApiResponse::data_success(responses)).into_response()
+            let response = to_response(clipboard);
+            Json(ApiResponse::data_success(response)).into_response()
         }
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error("未找到".to_string())),
+        )
+            .into_response(),
         Err(e) => {
             eprintln!("Error getting clipboards by openid: {:?}", e);
             (
@@ -215,7 +220,7 @@ pub async fn get_by_wx_code(
             // 提取openid
             if let Some(openid) = session.get("openid").and_then(|id| id.as_str()) {
                 // 查询该openid是否已有剪贴板
-                match get_single_clipboard_by_openid(pool.as_ref(), openid).await {
+                match get_clipboard_by_openid(pool.as_ref(), openid).await {
                     Ok(Some(clipboard)) => {
                         // 已存在，返回
                         let response = to_response(clipboard);
