@@ -58,7 +58,7 @@ async fn main() -> std::io::Result<()> {
         .route("/clipboard/:id", get(clipboard::get_by_id))
         .route(
             "/clipboard/openid/:openid",
-            post(clipboard::get_by_openid),
+            get(clipboard::get_by_openid),
         )
         .route(
             "/clipboard/wx/:code",

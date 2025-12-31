@@ -1,70 +1,52 @@
-# ======================== 构建阶段 ========================
-# 使用官方的 rust 镜像作为构建环境
-FROM rust:1.92 AS builder
-
-# 设置环境变量以优化构建
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse \
-    CARGO_TERM_COLOR=always \
-    RUSTFLAGS="-C target-cpu=native"
-
-# 设置工作目录
+# Stage 1: Build Backend
+FROM rust:alpine AS builder
 WORKDIR /app
 
-# 安装系统依赖（编译 Rust 项目所需）
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libssl-dev \
-    libsqlite3-dev \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+# Install build dependencies
+# musl-dev: for C compilation (needed by sqlite, ring, etc)
+# pkgconfig & openssl-dev: for native-tls
+RUN apk add --no-cache musl-dev pkgconfig openssl-dev
 
-# 复制项目文件
-COPY Cargo.deps.toml Cargo.toml
-
-# 创建一个临时的 src/main.rs 文件（仅用于构建依赖）
-RUN mkdir -p src
+# Create a dummy project to cache dependencies
+RUN mkdir src
 RUN echo 'fn main() { println!("Dummy main function"); }' > src/main.rs
+COPY Cargo.toml Cargo.lock ./
 
+# Build dependencies only
 RUN cargo build --release
 
-RUN rm -rf src Cargo.lock Cargo.toml
-
-COPY Cargo.toml Cargo.lock ./
+# Copy actual source code
 COPY src ./src
 
-# 构建项目（--release 确保编译优化）
+# Touch main.rs to force rebuild of the application
+RUN touch src/main.rs
+
+# Build the application
 RUN cargo build --release
 
-# ======================== 运行阶段 ========================
-# 使用 Debian trixie-slim 镜像作为运行环境（更小的镜像体积，适合生产环境）
-FROM debian:trixie-slim
-
-# 设置工作目录
+# Stage 2: Runtime
+FROM alpine:latest
 WORKDIR /app
 
-# 安装运行时依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libssl3 \
-    libsqlite3-0 \
-    tzdata \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Install necessary runtime dependencies
+# ca-certificates: for HTTPS
+# tzdata: for timezone
+# openssl: for native-tls (dynamic linking)
+# libgcc: often required for Rust binaries
+RUN apk add --no-cache ca-certificates tzdata openssl libgcc
 
-# 设置时区（根据你的需求调整，这里用上海时区）
+# Set timezone
 ENV TZ=Asia/Shanghai
 ENV RUST_BACKTRACE=full
 
-# 创建非 root 用户（安全最佳实践）
-RUN groupadd -g 1000 rust && useradd -u 1000 -g rust -m -s /bin/bash rust
-USER rust
+# Copy backend binary
+COPY --from=builder /app/target/release/rust_backend .
 
-# 从构建阶段复制编译好的二进制文件
-COPY --from=builder --chown=rust:rust /app/target/release/rust_backend ./
+# Copy static assets
+COPY swagger ./swagger
 
-# 复制必要的静态资源
-COPY --chown=rust:rust swagger ./swagger
-
-# 暴露端口（根据你的 actix-web 服务端口调整，默认 8080）
+# Expose port
 EXPOSE 8080
 
-# 设置启动命令
+# Run the application
 CMD ["./rust_backend"]
