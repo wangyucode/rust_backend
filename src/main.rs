@@ -14,6 +14,7 @@ use axum::{
 use tower::ServiceBuilder;
 use tower::make::Shared;
 use tower_http::normalize_path::NormalizePathLayer;
+use tower_http::trace::TraceLayer;
 use dotenv::dotenv;
 use sqlx::SqlitePool;
 use std::env;
@@ -30,6 +31,10 @@ async fn main() -> std::io::Result<()> {
     println!("🚀 服务器启动中，v{}", env!("CARGO_PKG_VERSION"));
     // 加载.env文件
     dotenv().ok();
+
+    // 初始化日志
+    tracing_subscriber::fmt::init();
+
 
     // 初始化数据库连接池
     let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
@@ -81,6 +86,7 @@ async fn main() -> std::io::Result<()> {
     let app = Router::default()
         .nest("/api/v1", api_routes)
         .with_state(pool)
+        .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new());
 
     let app = ServiceBuilder::new()
