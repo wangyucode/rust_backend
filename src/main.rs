@@ -11,6 +11,9 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use tower::ServiceBuilder;
+use tower::make::Shared;
+use tower_http::normalize_path::NormalizePathLayer;
 use dotenv::dotenv;
 use sqlx::SqlitePool;
 use std::env;
@@ -80,6 +83,10 @@ async fn main() -> std::io::Result<()> {
         .with_state(pool)
         .layer(CatchPanicLayer::new());
 
+    let app = ServiceBuilder::new()
+        .layer(NormalizePathLayer::trim_trailing_slash())
+        .service(app);
+
     let port = env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())
         .parse::<u16>()
@@ -89,8 +96,9 @@ async fn main() -> std::io::Result<()> {
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await?;
     println!("✅ 端口 {} 绑定成功，服务器开始运行", port);
 
-    axum::serve(listener, app).await?;
+    axum::serve(listener, Shared::new(app)).await?;
     println!("🛑 服务器已停止");
 
     Ok(())
 }
+
