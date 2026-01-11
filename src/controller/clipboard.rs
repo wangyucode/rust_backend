@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::{IntoResponse, Json},
+    response::{IntoResponse, Json, Response},
     Json as AxumJson,
 };
 use rand;
@@ -51,6 +51,61 @@ fn to_response(clipboard: Clipboard) -> ClipboardResponse {
         content: clipboard.content,
         create_time: clipboard.create_time,
         update_time: clipboard.update_time,
+    }
+}
+
+// 创建新的剪贴板逻辑
+async fn create_clipboard_for_openid(pool: &SqlitePool, openid: &str) -> Response {
+    let mut id = generate_short_uuid();
+
+    // 确保id唯一
+    while get_clipboard_by_id(pool, &id)
+        .await
+        .unwrap_or(None)
+        .is_some()
+    {
+        id.push_str(&rand::random::<u8>().to_string());
+    }
+
+    // 获取当前时间戳
+    let now = chrono::Utc::now().timestamp();
+
+    // 创建新的剪贴板
+    let new_clipboard = Clipboard {
+        id,
+        content: "请输入你想保存的内容,内容可在网页端: `https://wycode.cn/clipboard`  使用查询码查询,或小程序免登录查询。".to_string(),
+        openid: openid.to_string(),
+        create_time: now,
+        update_time: now,
+    };
+
+    // 插入数据库
+    match insert_clipboard(pool, &new_clipboard).await {
+        Ok(clipboard) => {
+            // 发送邮件通知
+            let email_config = EmailConfig::new(
+                Some("有新的用户注册了Clipboard服务".to_string()),
+                "剪贴板服务".to_string(),
+                None,
+            );
+            if let Err(e) = send_email(email_config).await {
+                eprintln!("Error sending email: {:?}", e);
+            }
+
+            // 返回新创建的剪贴板
+            let response = to_response(clipboard);
+            Json(ApiResponse::data_success(response)).into_response()
+        }
+        Err(e) => {
+            eprintln!("Error inserting clipboard: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "Failed to create clipboard".to_string(),
+                )),
+            )
+                .into_response()
+        }
     }
 }
 
@@ -114,11 +169,10 @@ pub async fn get_by_openid(
             let response = to_response(clipboard);
             Json(ApiResponse::data_success(response)).into_response()
         }
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            Json(ApiResponse::<()>::error("未找到".to_string())),
-        )
-            .into_response(),
+        Ok(None) => {
+            // 未找到，创建新的
+            create_clipboard_for_openid(pool.as_ref(), &path.openid).await
+        }
         Err(e) => {
             eprintln!("Error getting clipboards by openid: {:?}", e);
             (
@@ -182,7 +236,7 @@ pub async fn save_by_id(
                 Json(ApiResponse::<()>::error("未找到".to_string())),
             )
                 .into_response()
-        }
+            }
         Err(e) => {
             eprintln!("Error updating clipboard: {:?}", e);
             (
@@ -228,57 +282,7 @@ pub async fn get_by_wx_code(
                     }
                     Ok(None) => {
                         // 不存在，创建新的剪贴板
-                        let mut id = generate_short_uuid();
-
-                        // 确保id唯一
-                        while get_clipboard_by_id(pool.as_ref(), &id)
-                            .await
-                            .unwrap_or(None)
-                            .is_some()
-                        {
-                            id.push_str(&rand::random::<u8>().to_string());
-                        }
-
-                        // 获取当前时间戳
-                        let now = chrono::Utc::now().timestamp();
-
-                        // 创建新的剪贴板
-                        let new_clipboard = Clipboard {
-                            id,
-                            content: "请输入你想保存的内容,内容可在网页端: `https://wycode.cn/clipboard`  使用查询码查询,或小程序免登录查询。".to_string(),
-                            openid: openid.to_string(),
-                            create_time: now,
-                            update_time: now,
-                        };
-
-                        // 插入数据库
-                        match insert_clipboard(pool.as_ref(), &new_clipboard).await {
-                            Ok(clipboard) => {
-                                // 发送邮件通知
-                                let email_config = EmailConfig::new(
-                                    Some("有新的用户注册了Clipboard服务".to_string()),
-                                    "剪贴板服务".to_string(),
-                                    None,
-                                );
-                                if let Err(e) = send_email(email_config).await {
-                                    eprintln!("Error sending email: {:?}", e);
-                                }
-
-                                // 返回新创建的剪贴板
-                                let response = to_response(clipboard);
-                                Json(ApiResponse::data_success(response)).into_response()
-                            }
-                            Err(e) => {
-                                eprintln!("Error inserting clipboard: {:?}", e);
-                                (
-                                    StatusCode::INTERNAL_SERVER_ERROR,
-                                    Json(ApiResponse::<()>::error(
-                                        "Failed to create clipboard".to_string(),
-                                    )),
-                                )
-                                    .into_response()
-                            }
-                        }
+                        create_clipboard_for_openid(pool.as_ref(), openid).await
                     }
                     Err(e) => {
                         eprintln!("Error checking clipboard by openid: {:?}", e);
