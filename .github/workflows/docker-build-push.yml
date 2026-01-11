@@ -37,6 +37,8 @@ jobs:
           context: .
           push: true
           tags: wangyucode/rust_backend:latest,wangyucode/rust_backend:${{ env.VERSION }}
+          build-args: |
+            APP_VERSION=${{ env.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

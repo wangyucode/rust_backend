@@ -6,6 +6,7 @@ use crate::controller::coze;
 use crate::controller::email;
 use crate::controller::state;
 use crate::controller::wechat;
+use crate::controller::yml;
 use crate::dao::database::init_database_pool;
 use axum::{
     routing::{get, post},
@@ -19,7 +20,7 @@ use dotenv::dotenv;
 use sqlx::SqlitePool;
 use std::env;
 use std::sync::Arc;
-use tower_http::{catch_panic::CatchPanicLayer, services::ServeDir};
+use tower_http::catch_panic::CatchPanicLayer;
 
 mod after_startup;
 mod controller;
@@ -39,12 +40,7 @@ async fn main() -> std::io::Result<()> {
     // 初始化数据库连接池
     let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
 
-    // 检查 swagger 目录是否存在 (调试用途)
-    if let Err(e) = tokio::fs::metadata("swagger").await {
-        eprintln!("⚠️ 严重警告: 无法访问 'swagger' 目录: {}。访问 /doc 可能会导致错误。", e);
-    } else {
-        println!("✅ 'swagger' 目录检查通过");
-    }
+
 
     let pool_for_after_startup = Arc::clone(&pool);
     match after_startup::after_startup(&pool_for_after_startup).await {
@@ -77,14 +73,13 @@ async fn main() -> std::io::Result<()> {
         .route("/config", get(config::get_config))
         .route("/blog-view", get(blog::record_blog_view))
         .route("/popular-posts", get(blog::get_popular_posts))
-        .nest_service(
-            "/doc",
-            ServeDir::new("swagger").append_index_html_on_directories(true),
-        );
+        .route("/openapi.yml", get(|| async { include_str!("openapi.yml") }))
+    .route("/yml/*path", get(yml::get_yml));
 
     // 组装应用
     let app = Router::default()
         .nest("/api/v1", api_routes)
+        .route("/yml/*path", get(yml::get_yml))
         .with_state(pool)
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new());

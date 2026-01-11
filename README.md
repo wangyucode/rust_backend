@@ -2,23 +2,24 @@
 
 ## 项目介绍 (Project Introduction)
 
-这是一个基于 Rust 语言开发的后端服务项目，使用 Actix-web 框架构建，提供支持 <https://wycode.cn> 的相关 RESTful API 服务。
+这是一个基于 Rust 语言开发的后端服务项目，使用 Axum 框架构建，提供支持 <https://wycode.cn> 的相关 RESTful API 服务。
 
-This is a backend service project developed using Rust language, built with Actix-web framework, providing RESTful API to support <https://wycode.cn>.
+This is a backend service project developed using Rust language, built with Axum framework, providing RESTful API to support <https://wycode.cn>.
 
 ### 主要功能 (Key Features)
 
 - RESTful API 服务 (RESTful API service)
 - 数据库操作 (Database operations)
 - 邮件发送功能 (Email sending functionality)
-- Swagger API 文档 (Swagger API documentation)
+- OpenAPI 规范 (OpenAPI Specification)
 - 异步处理 (Asynchronous processing)
 
 ## 技术栈 (Technology Stack)
 
-- **Web 框架**: Actix-web 4
+- **Web 框架**: Axum 0.7
 - **数据库**: SQLite (通过 sqlx)
 - **异步运行时**: Tokio
+- **日志**: Tracing & Tracing Subscriber
 - **序列化**: Serde
 - **邮件发送**: Lettre
 - **环境变量**: Dotenv
@@ -29,20 +30,34 @@ This is a backend service project developed using Rust language, built with Acti
 rust_backend/
 ├── src/
 │   ├── controller/      # API 控制器层
-│   │   ├── app.rs       # 应用相关接口
+│   │   ├── blog.rs      # 博客相关接口
+│   │   ├── clipboard.rs # 剪贴板接口
+│   │   ├── comment.rs   # 评论接口
+│   │   ├── config.rs    # 配置接口
+│   │   ├── coze.rs      # Coze 代理接口
 │   │   ├── email.rs     # 邮件发送接口
 │   │   ├── state.rs     # 状态检查接口
+│   │   ├── wechat.rs    # 微信相关接口
+│   │   ├── yml.rs       # YML文件服务
 │   │   └── mod.rs
 │   ├── dao/             # 数据访问层
 │   │   ├── app.rs       # 应用数据操作
+│   │   ├── blog.rs      # 博客数据操作
+│   │   ├── clipboard.rs # 剪贴板数据操作
+│   │   ├── comment.rs   # 评论数据操作
 │   │   ├── database.rs  # 数据库连接管理
 │   │   └── mod.rs
+│   ├── util/            # 工具类
+│   │   ├── email.rs
+│   │   ├── uuid.rs
+│   │   └── mod.rs
+│   ├── after_startup.rs # 启动后任务
+│   ├── openapi.yml      # OpenAPI 定义
 │   └── main.rs          # 应用入口
 ├── db/                  # 数据库相关
 │   ├── migrations/      # 数据库迁移文件
 │   │   └── 20251217100000_init_tables.sql  # 初始化表结构
 │   └── sqlite.db        # SQLite 数据库文件
-├── swagger/             # Swagger API 文档
 ├── .gitignore
 ├── Cargo.lock
 └── Cargo.toml
@@ -123,11 +138,19 @@ cargo fmt
 cargo clippy
 ```
 
+## API 文档 (API Documentation)
+
+本项目提供 OpenAPI 规范文件。
+可以通过访问 `/api/v1/openapi.yml` 获取 OpenAPI 定义文件。
+
+This project provides an OpenAPI specification file.
+You can access the OpenAPI definition file at `/api/v1/openapi.yml`.
+
 ## 相关链接 (Related Links)
 
 - [Rust 官方网站](https://www.rust-lang.org/)
-- [Actix-web 文档](https://actix.rs/docs/)
+- [Axum 文档](https://docs.rs/axum/latest/axum/)
+- [Tracing 文档](https://docs.rs/tracing/latest/tracing/)
 - [SQLx 文档](https://docs.rs/sqlx/latest/sqlx/)
 - [Serde 文档](https://serde.rs/)
 - [Lettre 文档](https://docs.rs/lettre/latest/lettre/)
-- [Swagger UI](https://swagger.io/tools/swagger-ui/)

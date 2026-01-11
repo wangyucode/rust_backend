@@ -18,6 +18,10 @@ RUN cargo build --release
 # Copy actual source code
 COPY src ./src
 
+# Restore the actual version for the app build
+ARG APP_VERSION=0.0.0
+RUN sed -i "s/^version = \".*\"/version = \"$APP_VERSION\"/" Cargo.toml
+
 # Touch main.rs to force rebuild of the application
 RUN touch src/main.rs
 
@@ -42,8 +46,7 @@ ENV RUST_BACKTRACE=full
 # Copy backend binary
 COPY --from=builder /app/target/release/rust_backend .
 
-# Copy static assets
-COPY swagger ./swagger
+
 
 # Expose port
 EXPOSE 8080
