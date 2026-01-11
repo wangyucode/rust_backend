@@ -41,3 +41,4 @@ pub mod coze;
 pub mod email;
 pub mod state;
 pub mod wechat;
+pub mod yml;

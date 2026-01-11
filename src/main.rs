@@ -6,6 +6,7 @@ use crate::controller::coze;
 use crate::controller::email;
 use crate::controller::state;
 use crate::controller::wechat;
+use crate::controller::yml;
 use crate::dao::database::init_database_pool;
 use axum::{
     routing::{get, post},
@@ -72,11 +73,13 @@ async fn main() -> std::io::Result<()> {
         .route("/config", get(config::get_config))
         .route("/blog-view", get(blog::record_blog_view))
         .route("/popular-posts", get(blog::get_popular_posts))
-        .route("/openapi.yml", get(|| async { include_str!("openapi.yml") }));
+        .route("/openapi.yml", get(|| async { include_str!("openapi.yml") }))
+    .route("/yml/*path", get(yml::get_yml));
 
     // 组装应用
     let app = Router::default()
         .nest("/api/v1", api_routes)
+        .route("/yml/*path", get(yml::get_yml))
         .with_state(pool)
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new());
