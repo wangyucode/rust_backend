@@ -42,8 +42,7 @@ ENV RUST_BACKTRACE=full
 # Copy backend binary
 COPY --from=builder /app/target/release/rust_backend .
 
-# Copy static assets
-COPY swagger ./swagger
+
 
 # Expose port
 EXPOSE 8080
