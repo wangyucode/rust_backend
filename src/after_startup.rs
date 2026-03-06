@@ -1,10 +1,9 @@
 use anyhow::Result;
 use sqlx::{Row, SqlitePool};
 use std::sync::Arc;
-use tokio::time::Duration;
 
-use crate::dao::blog;
 use crate::util::email;
+use crate::task::{caddy, visit};
 
 /// 启动前业务逻辑
 pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
@@ -23,32 +22,11 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
         tables_info.push_str(&table_info);
     }
 
-    // 启动定时清理任务
-    let pool_for_cleanup = Arc::clone(pool);
+    // 启动访问记录清理任务
+    visit::start_clean_visit_task(Arc::clone(pool));
 
-    let cleanup_handle = tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
-
-        loop {
-            interval.tick().await;
-            if let Err(e) = clean_old_visits_task(&pool_for_cleanup).await {
-                eprintln!("❌ 清理旧访问记录失败: {}", e);
-            }
-        }
-    });
-
-    // 监控定时清理任务的状态，但不使用unwrap_err()
-    tokio::spawn(async move {
-        let result = cleanup_handle.await;
-        match result {
-            Err(e) => {
-                eprintln!("❌ 定时清理任务结束并返回错误: {:?}", e);
-            }
-            Ok(_) => {
-                eprintln!("❌ 定时清理任务意外结束");
-            }
-        }
-    });
+    // 启动 Caddy 日志导入任务
+    caddy::start_caddy_log_task(Arc::clone(pool));
 
     // 发送启动通知邮件
     let start_notification = format!(
@@ -71,12 +49,5 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
         }
     }
 
-    Ok(())
-}
-
-/// 清理旧访问记录的任务
-async fn clean_old_visits_task(pool: &Arc<SqlitePool>) -> Result<()> {
-    // 执行清理
-    blog::clean_old_visits(pool.as_ref()).await?;
     Ok(())
 }
