@@ -13,6 +13,7 @@ This is a backend service project developed using Rust language, built with Axum
 - 邮件发送功能 (Email sending functionality)
 - OpenAPI 规范 (OpenAPI Specification)
 - 异步处理 (Asynchronous processing)
+- Caddy 访问日志导入 (Caddy Access Log Ingestion)
 
 ## 技术栈 (Technology Stack)
 
@@ -23,6 +24,7 @@ This is a backend service project developed using Rust language, built with Axum
 - **序列化**: Serde
 - **邮件发送**: Lettre
 - **环境变量**: Dotenv
+- **文件标识**: file-id (用于跨平台文件追踪)
 
 ## 项目结构 (Project Structure)
 
@@ -50,6 +52,10 @@ rust_backend/
 │   ├── util/            # 工具类
 │   │   ├── email.rs
 │   │   ├── uuid.rs
+│   │   └── mod.rs
+│   ├── task/            # 后台任务
+│   │   ├── caddy.rs     # Caddy 日志导入任务
+│   │   ├── visit.rs     # 访问记录清理任务
 │   │   └── mod.rs
 │   ├── after_startup.rs # 启动后任务
 │   ├── openapi.yml      # OpenAPI 定义
@@ -101,6 +107,38 @@ Database migration files are stored in the `./db/migrations/` directory, using t
 
 - 初始化迁移文件: `20251217100000_init_tables.sql`
 - Initial migration file: `20251217100000_init_tables.sql`
+
+## 后台任务 (Background Tasks)
+
+### Caddy 日志导入 (Caddy Log Ingestion)
+
+项目会自动将 Caddy 的 JSON 访问日志导入到 SQLite 数据库中。
+
+- **日志目录**: `db/caddy-access-logs/`
+- **文件命名**: `<domain>.access.log` (例如 `wycode.cn.access.log`)
+- **执行频率**: 每 5 秒轮询一次。
+- **数据保留**: 自动清理超过 30 天的日志记录。
+- **状态维护**: 自动记录文件读取位置（Offset）和文件唯一标识（File-ID），支持断点续传和日志轮转（Rotate）。
+
+The project automatically ingests Caddy's JSON access logs into the SQLite database.
+
+- **Log Directory**: `db/caddy-access-logs/`
+- **File Naming**: `<domain>.access.log` (e.g., `wycode.cn.access.log`)
+- **Frequency**: Polling every 5 seconds.
+- **Retention**: Automatically cleans up logs older than 30 days.
+- **State Maintenance**: Records offset and file ID for resume and rotate support.
+
+### 访问记录清理 (Blog Visit Cleanup)
+
+自动清理数据库中超过 30 天的博客访问记录。
+
+- **执行频率**: 每 24 小时执行一次。
+- **清理范围**: `blog_visits` 表中 `timestamp` 超过 30 天的数据。
+
+Automatically cleans up blog visit records older than 30 days in the database.
+
+- **Frequency**: Every 24 hours.
+- **Scope**: Records in `blog_visits` table where `timestamp` is older than 30 days.
 
 ## 运行命令 (Run Commands)
 

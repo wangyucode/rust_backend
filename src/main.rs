@@ -26,6 +26,7 @@ mod after_startup;
 mod controller;
 mod dao;
 mod util;
+mod task;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
