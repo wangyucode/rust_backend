@@ -1,2 +1,2 @@
 pub mod caddy;
-pub mod visit;
+pub mod daily;

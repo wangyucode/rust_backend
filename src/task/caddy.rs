@@ -63,18 +63,6 @@ pub fn start_caddy_log_task(pool: Arc<SqlitePool>) {
             }
         }
     });
-
-    // 每天清理一次旧日志
-    let pool_cleanup = pool.clone();
-    tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(24 * 60 * 60));
-        loop {
-            interval.tick().await;
-            if let Err(e) = clean_old_logs(&pool_cleanup).await {
-                eprintln!("❌ Caddy旧日志清理失败: {:?}", e);
-            }
-        }
-    });
 }
 
 async fn process_logs(pool: &SqlitePool) -> Result<()> {
@@ -253,7 +241,7 @@ async fn insert_batch(pool: &SqlitePool, logs: &[(String, CaddyLog)]) -> Result<
     Ok(())
 }
 
-async fn clean_old_logs(pool: &SqlitePool) -> Result<()> {
+pub async fn clean_old_logs(pool: &SqlitePool) -> Result<()> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64();
     let threshold = now - (30.0 * 24.0 * 60.0 * 60.0);
     

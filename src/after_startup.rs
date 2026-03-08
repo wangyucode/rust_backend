@@ -3,10 +3,13 @@ use sqlx::{Row, SqlitePool};
 use std::sync::Arc;
 
 use crate::util::email;
-use crate::task::{caddy, visit};
+use crate::task::{caddy, daily};
 
 /// 启动前业务逻辑
 pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
+    // 启动每日任务
+    daily::start_daily_tasks(Arc::clone(pool));
+    
     // 打印数据库表和数据量
     let tables = sqlx::query("SELECT name FROM sqlite_master WHERE type='table'")
         .fetch_all(pool.as_ref())
@@ -22,10 +25,7 @@ pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
         tables_info.push_str(&table_info);
     }
 
-    // 启动访问记录清理任务
-    visit::start_clean_visit_task(Arc::clone(pool));
-
-    // 启动 Caddy 日志导入任务
+    // 启动 Caddy 日志导入任务 (5s)
     caddy::start_caddy_log_task(Arc::clone(pool));
 
     // 发送启动通知邮件
