@@ -4,6 +4,7 @@ use crate::controller::comment;
 use crate::controller::config;
 use crate::controller::coze;
 use crate::controller::email;
+use crate::controller::sql_ai;
 use crate::controller::state;
 use crate::controller::wechat;
 use crate::controller::yml;
@@ -74,6 +75,7 @@ async fn main() -> std::io::Result<()> {
         .route("/config", get(config::get_config))
         .route("/blog-view", get(blog::record_blog_view))
         .route("/popular-posts", get(blog::get_popular_posts))
+        .route("/sql/correct", post(sql_ai::correct_sql))
         .route("/openapi.yml", get(|| async { include_str!("openapi.yml") }))
     .route("/yml/*path", get(yml::get_yml));
 

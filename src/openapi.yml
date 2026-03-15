@@ -388,6 +388,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
 
+  # SQL AI API
+  /sql/correct:
+    post:
+      tags:
+        - SQL AI
+      summary: AI SQL correction
+      description: Uses an OpenAI-compatible LLM to analyze and correct a potentially broken SQL statement based on the current database schema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SqlCorrectionRequest"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - type: object
+                    properties:
+                      payload:
+                        $ref: "#/components/schemas/SqlCorrectionResponse"
+        "400":
+          description: Bad request (empty SQL)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "500":
+          description: Internal server error (AI API failure or missing configuration)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
   # Config API
   /config:
     get:
@@ -569,6 +607,39 @@ components:
       example:
         id: "blog_post_123"
         view_count: 42
+
+    # SQL AI schemas
+    SqlCorrectionRequest:
+      type: object
+      required:
+        - sql
+      properties:
+        sql:
+          type: string
+          description: The SQL statement to be corrected
+        error:
+          type: string
+          description: Optional error message from executing the SQL
+      example:
+        sql: "SELCT * FORM users WHER id = 1"
+        error: "near \"SELCT\": syntax error"
+
+    SqlCorrectionResponse:
+      type: object
+      properties:
+        original_sql:
+          type: string
+          description: The original SQL statement
+        corrected_sql:
+          type: string
+          description: The corrected SQL statement
+        explanation:
+          type: string
+          description: Explanation of the corrections made
+      example:
+        original_sql: "SELCT * FORM users WHER id = 1"
+        corrected_sql: "SELECT * FROM users WHERE id = 1"
+        explanation: "Fixed typos: SELCT→SELECT, FORM→FROM, WHER→WHERE"
 
     PopularPostsResponse:
       type: array

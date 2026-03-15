@@ -14,6 +14,7 @@ This is a backend service project developed using Rust language, built with Axum
 - OpenAPI 规范 (OpenAPI Specification)
 - 异步处理 (Asynchronous processing)
 - Caddy 访问日志导入 (Caddy Access Log Ingestion)
+- AI SQL纠正 (AI-powered SQL correction)
 
 ## 技术栈 (Technology Stack)
 
@@ -37,6 +38,7 @@ rust_backend/
 │   │   ├── comment.rs   # 评论接口
 │   │   ├── config.rs    # 配置接口
 │   │   ├── coze.rs      # Coze 代理接口
+│   │   ├── sql_ai.rs    # AI SQL纠正接口
 │   │   ├── email.rs     # 邮件发送接口
 │   │   ├── state.rs     # 状态检查接口
 │   │   ├── wechat.rs    # 微信相关接口
@@ -107,6 +109,54 @@ Database migration files are stored in the `./db/migrations/` directory, using t
 
 - 初始化迁移文件: `20251217100000_init_tables.sql`
 - Initial migration file: `20251217100000_init_tables.sql`
+
+## AI SQL纠正 (AI SQL Correction)
+
+使用 OpenAI 兼容的大模型 API 自动纠正有语法或逻辑错误的 SQL 语句。
+
+Uses an OpenAI-compatible LLM API to automatically correct SQL statements with syntax or logic errors.
+
+### API 端点 (API Endpoint)
+
+```
+POST /api/v1/sql/correct
+```
+
+**请求体 (Request Body):**
+```json
+{
+  "sql": "SELCT * FORM users WHER id = 1",
+  "error": "near \"SELCT\": syntax error"
+}
+```
+
+**响应 (Response):**
+```json
+{
+  "success": true,
+  "message": "success",
+  "payload": {
+    "original_sql": "SELCT * FORM users WHER id = 1",
+    "corrected_sql": "SELECT * FROM users WHERE id = 1",
+    "explanation": "修正了拼写错误: SELCT→SELECT, FORM→FROM, WHER→WHERE"
+  }
+}
+```
+
+### 环境变量 (Environment Variables)
+
+| 变量名 | 必填 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `OPENAI_API_KEY` | ✅ | - | OpenAI 兼容 API 的密钥 |
+| `OPENAI_API_BASE` | ❌ | `https://api.openai.com/v1` | API 基础 URL（可替换为其他兼容服务） |
+| `OPENAI_MODEL` | ❌ | `gpt-4o` | 使用的模型名称 |
+
+### 工作原理 (How It Works)
+
+1. 自动读取当前 SQLite 数据库的完整 schema（表结构）
+2. 将 schema + 用户的 SQL + 可选的错误信息一起发送给大模型
+3. 大模型分析并返回纠正后的 SQL 和修改说明
+4. 支持任何 OpenAI 兼容的 API（如 OpenAI、DeepSeek、通义千问等）
 
 ## 后台任务 (Background Tasks)
 

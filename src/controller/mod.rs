@@ -39,6 +39,7 @@ pub mod comment;
 pub mod config;
 pub mod coze;
 pub mod email;
+pub mod sql_ai;
 pub mod state;
 pub mod wechat;
 pub mod yml;
