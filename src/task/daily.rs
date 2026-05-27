@@ -21,7 +21,7 @@ pub fn start_daily_tasks(pool: Arc<SqlitePool>) {
                 eprintln!("❌ 数据库备份失败: {:?}", e);
             }
 
-            // 2. 清理旧备份 (30天前)
+            // 2. 清理旧备份 (7天前)
             if let Err(e) = clean_old_backups() {
                 eprintln!("❌ 清理旧备份失败: {:?}", e);
             }
@@ -58,7 +58,7 @@ async fn backup_database(pool: &SqlitePool) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// 清理超过 30 天的旧备份
+/// 清理旧备份，仅保留最近 7 天的数据库备份
 fn clean_old_backups() -> anyhow::Result<()> {
     let backup_dir = "./db/backups";
     if !Path::new(backup_dir).exists() {
@@ -67,7 +67,7 @@ fn clean_old_backups() -> anyhow::Result<()> {
 
     let entries = fs::read_dir(backup_dir)?;
     let now = Local::now().timestamp();
-    let seven_days_secs = 30 * 24 * 60 * 60;
+    let retention_secs = 7 * 24 * 60 * 60;
 
     for entry in entries {
         let entry = entry?;
@@ -75,7 +75,7 @@ fn clean_old_backups() -> anyhow::Result<()> {
         if path.is_file() {
             let metadata = fs::metadata(&path)?;
             let modified = metadata.modified()?.duration_since(std::time::UNIX_EPOCH)?.as_secs();
-            if (now as u64) - modified > seven_days_secs {
+            if (now as u64) - modified > retention_secs {
                 fs::remove_file(&path)?;
                 println!("🗑️ 已清理旧备份文件: {:?}", path);
             }
