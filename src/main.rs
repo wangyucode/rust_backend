@@ -4,29 +4,30 @@ use crate::controller::comment;
 use crate::controller::config;
 use crate::controller::coze;
 use crate::controller::email;
+use crate::controller::roll;
 use crate::controller::state;
 use crate::controller::wechat;
 use crate::controller::yml;
 use crate::dao::database::init_database_pool;
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
-use tower::ServiceBuilder;
-use tower::make::Shared;
-use tower_http::normalize_path::NormalizePathLayer;
-use tower_http::trace::TraceLayer;
 use dotenv::dotenv;
 use sqlx::SqlitePool;
 use std::env;
 use std::sync::Arc;
+use tower::ServiceBuilder;
+use tower::make::Shared;
 use tower_http::catch_panic::CatchPanicLayer;
+use tower_http::normalize_path::NormalizePathLayer;
+use tower_http::trace::TraceLayer;
 
 mod after_startup;
 mod controller;
 mod dao;
-mod util;
 mod task;
+mod util;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -37,11 +38,8 @@ async fn main() -> std::io::Result<()> {
     // 初始化日志
     tracing_subscriber::fmt::init();
 
-
     // 初始化数据库连接池
     let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
-
-
 
     let pool_for_after_startup = Arc::clone(&pool);
     match after_startup::after_startup(&pool_for_after_startup).await {
@@ -61,21 +59,21 @@ async fn main() -> std::io::Result<()> {
             get(comment::get_comments).post(comment::post_comment),
         )
         .route("/clipboard/:id", get(clipboard::get_by_id))
-        .route(
-            "/clipboard/openid/:openid",
-            get(clipboard::get_by_openid),
-        )
-        .route(
-            "/clipboard/wx/:code",
-            get(clipboard::get_by_wx_code),
-        )
+        .route("/clipboard/openid/:openid", get(clipboard::get_by_openid))
+        .route("/clipboard/wx/:code", get(clipboard::get_by_wx_code))
         .route("/clipboard", post(clipboard::save_by_id))
         .route("/coze/token", get(coze::get_token))
         .route("/config", get(config::get_config))
         .route("/blog-view", get(blog::record_blog_view))
         .route("/popular-posts", get(blog::get_popular_posts))
-        .route("/openapi.yml", get(|| async { include_str!("openapi.yml") }))
-    .route("/yml/*path", get(yml::get_yml));
+        .route("/roll/login", post(roll::login))
+        .route("/roll/team", post(roll::set_team))
+        .route("/roll/score", post(roll::report_score))
+        .route(
+            "/openapi.yml",
+            get(|| async { include_str!("openapi.yml") }),
+        )
+        .route("/yml/*path", get(yml::get_yml));
 
     // 组装应用
     let app = Router::default()
@@ -103,4 +101,3 @@ async fn main() -> std::io::Result<()> {
 
     Ok(())
 }
-

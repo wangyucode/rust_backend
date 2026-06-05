@@ -51,7 +51,7 @@ pub async fn get_popular_posts(
 pub async fn clean_old_visits(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     // 首先检查表是否存在
     let table_exists = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='blog_visits'"
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='blog_visits'",
     )
     .fetch_one(pool)
     .await?;

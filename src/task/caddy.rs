@@ -54,7 +54,7 @@ pub fn start_caddy_log_task(pool: Arc<SqlitePool>) {
     tokio::spawn(async move {
         // Wait a bit for startup to finish
         time::sleep(Duration::from_secs(5)).await;
-        
+
         let mut interval = time::interval(Duration::from_secs(5));
         loop {
             interval.tick().await;
@@ -70,7 +70,11 @@ async fn process_logs(pool: &SqlitePool) -> Result<()> {
     for entry in glob(&pattern).context("Failed to read glob pattern")? {
         match entry {
             Ok(path) => {
-                let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_string();
+                let file_name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or_default()
+                    .to_string();
                 let domain = file_name.trim_end_matches(".access.log").to_string();
 
                 match process_single_file(pool, &path, &file_name, &domain).await {
@@ -97,13 +101,17 @@ async fn process_single_file(
     domain: &str,
 ) -> Result<Vec<(String, CaddyLog)>> {
     // 1. 获取文件当前 ID (跨平台)
-    let current_file_id = get_file_id(path).map(|id| format!("{:?}", id)).unwrap_or_default();
-    
+    let current_file_id = get_file_id(path)
+        .map(|id| format!("{:?}", id))
+        .unwrap_or_default();
+
     // 2. 从数据库查询状态
-    let db_state: Option<DbFileState> = sqlx::query_as("SELECT file_name, file_id, offset, updated_at FROM caddy_file_state WHERE file_name = ?")
-        .bind(file_name)
-        .fetch_optional(pool)
-        .await?;
+    let db_state: Option<DbFileState> = sqlx::query_as(
+        "SELECT file_name, file_id, offset, updated_at FROM caddy_file_state WHERE file_name = ?",
+    )
+    .bind(file_name)
+    .fetch_optional(pool)
+    .await?;
 
     let mut current_offset = 0u64;
     let mut need_reset = false;
@@ -139,7 +147,7 @@ async fn process_single_file(
     if file_size <= current_offset {
         // 没有新内容，但也需要确保数据库中有记录（如果是新文件或Rotate后）
         if need_reset || db_state.is_none() {
-             save_file_state(pool, file_name, &current_file_id, current_offset).await?;
+            save_file_state(pool, file_name, &current_file_id, current_offset).await?;
         }
         return Ok(Vec::new());
     }
@@ -155,15 +163,15 @@ async fn process_single_file(
         bytes_buffer.clear();
         let bytes_read = reader.read_until(b'\n', &mut bytes_buffer)?;
         if bytes_read == 0 {
-            break; 
+            break;
         }
-        
+
         if bytes_buffer.ends_with(&[b'\n']) {
-             let line_str = String::from_utf8_lossy(&bytes_buffer);
-             if let Ok(log) = serde_json::from_str::<CaddyLog>(&line_str) {
-                 logs.push((domain.to_string(), log));
-             }
-             new_offset += bytes_read as u64;
+            let line_str = String::from_utf8_lossy(&bytes_buffer);
+            if let Ok(log) = serde_json::from_str::<CaddyLog>(&line_str) {
+                logs.push((domain.to_string(), log));
+            }
+            new_offset += bytes_read as u64;
         } else {
             break;
         }
@@ -177,7 +185,12 @@ async fn process_single_file(
     Ok(logs)
 }
 
-async fn save_file_state(pool: &SqlitePool, file_name: &str, file_id: &str, offset: u64) -> Result<()> {
+async fn save_file_state(
+    pool: &SqlitePool,
+    file_name: &str,
+    file_id: &str,
+    offset: u64,
+) -> Result<()> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
     sqlx::query("INSERT OR REPLACE INTO caddy_file_state (file_name, file_id, offset, updated_at) VALUES (?, ?, ?, ?)")
         .bind(file_name)
@@ -195,7 +208,7 @@ async fn insert_batch(pool: &SqlitePool, logs: &[(String, CaddyLog)]) -> Result<
             ts, level, logger, msg, 
             remote_ip, remote_port, client_ip, proto, method, host, uri, req_headers, tls,
             bytes_read, user_id, duration, size, status, resp_headers, domain
-        ) "
+        ) ",
     );
 
     query_builder.push_values(logs, |mut b, (domain, log)| {
@@ -203,7 +216,7 @@ async fn insert_batch(pool: &SqlitePool, logs: &[(String, CaddyLog)]) -> Result<
         b.push_bind(&log.level);
         b.push_bind(&log.logger);
         b.push_bind(&log.msg);
-        
+
         if let Some(req) = &log.request {
             b.push_bind(&req.remote_ip);
             let port = req.remote_port.as_ref().and_then(|p| p.parse::<i32>().ok());
@@ -216,15 +229,15 @@ async fn insert_batch(pool: &SqlitePool, logs: &[(String, CaddyLog)]) -> Result<
             b.push_bind(req.headers.as_ref().map(|v| v.to_string()));
             b.push_bind(req.tls.as_ref().map(|v| v.to_string()));
         } else {
-             b.push_bind(Option::<String>::None);
-             b.push_bind(Option::<i32>::None);
-             b.push_bind(Option::<String>::None);
-             b.push_bind(Option::<String>::None);
-             b.push_bind(Option::<String>::None);
-             b.push_bind(Option::<String>::None);
-             b.push_bind(Option::<String>::None);
-             b.push_bind(Option::<String>::None);
-             b.push_bind(Option::<String>::None);
+            b.push_bind(Option::<String>::None);
+            b.push_bind(Option::<i32>::None);
+            b.push_bind(Option::<String>::None);
+            b.push_bind(Option::<String>::None);
+            b.push_bind(Option::<String>::None);
+            b.push_bind(Option::<String>::None);
+            b.push_bind(Option::<String>::None);
+            b.push_bind(Option::<String>::None);
+            b.push_bind(Option::<String>::None);
         }
 
         b.push_bind(log.bytes_read);
@@ -244,7 +257,7 @@ async fn insert_batch(pool: &SqlitePool, logs: &[(String, CaddyLog)]) -> Result<
 pub async fn clean_old_logs(pool: &SqlitePool) -> Result<()> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64();
     let threshold = now - (30.0 * 24.0 * 60.0 * 60.0);
-    
+
     sqlx::query("DELETE FROM caddy_access_log WHERE ts < ?")
         .bind(threshold)
         .execute(pool)

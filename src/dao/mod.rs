@@ -3,3 +3,4 @@ pub mod blog;
 pub mod clipboard;
 pub mod comment;
 pub mod database;
+pub mod roll;

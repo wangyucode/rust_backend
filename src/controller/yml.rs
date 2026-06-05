@@ -1,17 +1,14 @@
 use crate::controller::ApiResponse;
 use axum::{
+    Json,
     extract::Path,
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    Json,
 };
 use std::path::PathBuf;
 use tokio::fs;
 
-pub async fn get_yml(
-    Path(path): Path<String>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
+pub async fn get_yml(Path(path): Path<String>, headers: HeaderMap) -> impl IntoResponse {
     let accept_header = headers
         .get("accept")
         .and_then(|h| h.to_str().ok())
@@ -24,7 +21,8 @@ pub async fn get_yml(
             (code, Json(ApiResponse::<()>::error(msg))).into_response()
         } else {
             let resp = ApiResponse::<()>::error(msg);
-            let body = serde_yaml::to_string(&resp).unwrap_or_else(|_| "Internal Serialization Error".to_string());
+            let body = serde_yaml::to_string(&resp)
+                .unwrap_or_else(|_| "Internal Serialization Error".to_string());
             (
                 code,
                 [(axum::http::header::CONTENT_TYPE, "application/yaml")],
@@ -53,13 +51,18 @@ pub async fn get_yml(
     // Parse YAML content
     let yaml_value: serde_yaml::Value = match serde_yaml::from_str(&content) {
         Ok(v) => v,
-        Err(e) => return return_error(StatusCode::INTERNAL_SERVER_ERROR, format!("Invalid YAML: {}", e)),
+        Err(e) => {
+            return return_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Invalid YAML: {}", e),
+            );
+        }
     };
 
     // Return success response
     if is_json {
         // For JSON, we can use serde_yaml::Value directly as it implements Serialize,
-        // or convert to serde_json::Value if strictly needed. 
+        // or convert to serde_json::Value if strictly needed.
         // ApiResponse<T> where T: Serialize works with serde_yaml::Value.
         Json(ApiResponse::data_success(yaml_value)).into_response()
     } else {

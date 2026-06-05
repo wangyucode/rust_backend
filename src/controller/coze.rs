@@ -1,6 +1,4 @@
-use axum::{
-    response::{IntoResponse, Json},
-};
+use axum::response::{IntoResponse, Json};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use reqwest::Client;
