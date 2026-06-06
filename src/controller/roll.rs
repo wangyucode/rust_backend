@@ -48,6 +48,18 @@ pub struct SetTeamRequest {
     pub team: Option<String>,
 }
 
+#[derive(Serialize)]
+pub struct ScoreReportPayload {
+    #[serde(rename = "addedTeamScore")]
+    pub added_team_score: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rank: Option<String>,
+    #[serde(rename = "teamRank", skip_serializing_if = "Option::is_none")]
+    pub team_rank: Option<String>,
+}
+
 #[derive(Deserialize)]
 pub struct ScoreRequest {
     pub openid: String,
@@ -259,7 +271,27 @@ pub async fn report_score(
     }
 
     match add_user_score(pool.as_ref(), &body.openid, body.score).await {
-        Ok(Some(added_score)) => Json(ApiResponse::data_success(added_score)).into_response(),
+        Ok(Some(result)) => {
+            let payload = ScoreReportPayload {
+                added_team_score: result.added_team_score,
+                score: if result.is_new_record {
+                    Some(result.score)
+                } else {
+                    None
+                },
+                rank: if result.is_new_record {
+                    Some(result.rank)
+                } else {
+                    None
+                },
+                team_rank: if result.is_new_record {
+                    Some(result.team_rank)
+                } else {
+                    None
+                },
+            };
+            Json(ApiResponse::data_success(payload)).into_response()
+        }
         Ok(None) => (
             StatusCode::NOT_FOUND,
             Json(ApiResponse::<()>::error("User not found".to_string())),

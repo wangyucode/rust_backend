@@ -14,6 +14,15 @@ pub struct RollTeam {
     pub score: f64,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ScoreUpdateResult {
+    pub added_team_score: f64,
+    pub is_new_record: bool,
+    pub score: i64,
+    pub rank: String,
+    pub team_rank: String,
+}
+
 pub async fn get_user_by_openid(
     pool: &SqlitePool,
     openid: &str,
@@ -65,7 +74,7 @@ pub async fn add_user_score(
     pool: &SqlitePool,
     openid: &str,
     report_score: i64,
-) -> Result<Option<f64>, Error> {
+) -> Result<Option<ScoreUpdateResult>, Error> {
     let mut tx = pool.begin().await?;
 
     // 1. Get user and team info
@@ -81,8 +90,15 @@ pub async fn add_user_score(
         None => return Ok(None),
     };
 
+    let is_new_record = report_score > user.score;
+    let current_best = if is_new_record {
+        report_score
+    } else {
+        user.score
+    };
+
     // 2. Update personal best if reported score is higher
-    if report_score > user.score {
+    if is_new_record {
         sqlx::query("UPDATE roll_user SET score = ? WHERE openid = ?")
             .bind(report_score)
             .bind(openid)
@@ -93,11 +109,11 @@ pub async fn add_user_score(
     let mut added_team_score = 0.0;
 
     // 3. Update team score if user is in a team
-    if let Some(team_name) = user.team_name {
+    if let Some(ref team_name) = user.team_name {
         // Count members in this team
         let member_count_row: (i64,) =
             sqlx::query_as("SELECT COUNT(*) FROM roll_user WHERE team_name = ?")
-                .bind(&team_name)
+                .bind(team_name)
                 .fetch_one(&mut *tx)
                 .await?;
 
@@ -115,7 +131,39 @@ pub async fn add_user_score(
 
     tx.commit().await?;
 
-    Ok(Some(added_team_score))
+    // Calculate rank percentage
+    let user_rank = get_user_rank(pool, current_best).await.unwrap_or(1);
+    let user_count = get_user_count(pool).await.unwrap_or(1);
+    let user_rank_percent = if user_count > 0 {
+        let denominator = user_count.max(100);
+        (user_rank as f64 / denominator as f64 * 100.0).ceil() as i64
+    } else {
+        100
+    };
+
+    // Calculate team rank percentage
+    let mut team_rank_str = "-".to_string();
+    if let Some(ref team_name) = user.team_name {
+        let team_user_rank = get_user_rank_in_team(pool, current_best, team_name)
+            .await
+            .unwrap_or(1);
+        let team_user_count = get_team_member_count(pool, team_name)
+            .await
+            .unwrap_or(1);
+        if team_user_count > 0 {
+            let denominator = team_user_count.max(100);
+            let team_rank_percent = (team_user_rank as f64 / denominator as f64 * 100.0).ceil() as i64;
+            team_rank_str = format!("{}%", team_rank_percent);
+        }
+    }
+
+    Ok(Some(ScoreUpdateResult {
+        added_team_score,
+        is_new_record,
+        score: current_best,
+        rank: format!("{}%", user_rank_percent),
+        team_rank: team_rank_str,
+    }))
 }
 
 pub async fn get_user_rank(pool: &SqlitePool, score: i64) -> Result<i64, Error> {
