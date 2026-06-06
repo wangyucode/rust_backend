@@ -1,8 +1,8 @@
 use axum::{
+    Json as AxumJson,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Json, Response},
-    Json as AxumJson,
 };
 use rand;
 use sqlx::SqlitePool;
@@ -12,8 +12,8 @@ use std::sync::Arc;
 use super::ApiResponse;
 use super::wechat::get_wechat_session;
 use crate::dao::clipboard::{
-    get_clipboard_by_id, get_clipboard_by_openid, insert_clipboard,
-    update_clipboard_by_id, Clipboard, ClipboardResponse,
+    Clipboard, ClipboardResponse, get_clipboard_by_id, get_clipboard_by_openid, insert_clipboard,
+    update_clipboard_by_id,
 };
 use crate::util::email::{EmailConfig, send_email};
 use crate::util::uuid::generate_short_uuid;
@@ -236,7 +236,7 @@ pub async fn save_by_id(
                 Json(ApiResponse::<()>::error("未找到".to_string())),
             )
                 .into_response()
-            }
+        }
         Err(e) => {
             eprintln!("Error updating clipboard: {:?}", e);
             (

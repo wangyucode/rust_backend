@@ -53,7 +53,6 @@ pub async fn get_clipboard_by_openid(
     Ok(clipboard)
 }
 
-
 // 根据id更新剪贴板内容
 pub async fn update_clipboard_by_id(
     pool: &SqlitePool,

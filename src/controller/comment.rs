@@ -11,8 +11,8 @@ use uuid::Uuid;
 
 use super::ApiResponse;
 use crate::dao::comment::{
-    get_comments_by_app_topic, insert_comment, update_comment_like, validate_app_key, Comment,
-    CommentResponse, ToResponse,
+    Comment, CommentResponse, ToResponse, get_comments_by_app_topic, insert_comment,
+    update_comment_like, validate_app_key,
 };
 use crate::util::email::{EmailConfig, send_email};
 

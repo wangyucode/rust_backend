@@ -2,14 +2,14 @@ use anyhow::Result;
 use sqlx::{Row, SqlitePool};
 use std::sync::Arc;
 
-use crate::util::email;
 use crate::task::{caddy, daily};
+use crate::util::email;
 
 /// 启动前业务逻辑
 pub async fn after_startup(pool: &Arc<SqlitePool>) -> Result<()> {
     // 启动每日任务
     daily::start_daily_tasks(Arc::clone(pool));
-    
+
     // 打印数据库表和数据量
     let tables = sqlx::query("SELECT name FROM sqlite_master WHERE type='table'")
         .fetch_all(pool.as_ref())

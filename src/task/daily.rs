@@ -1,12 +1,12 @@
+use crate::dao::blog;
+use crate::task::caddy;
+use chrono::Local;
 use sqlx::SqlitePool;
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time;
-use crate::dao::blog;
-use crate::task::caddy;
-use std::path::Path;
-use chrono::Local;
-use std::fs;
 
 /// 启动每日任务
 pub fn start_daily_tasks(pool: Arc<SqlitePool>) {
@@ -74,7 +74,10 @@ fn clean_old_backups() -> anyhow::Result<()> {
         let path = entry.path();
         if path.is_file() {
             let metadata = fs::metadata(&path)?;
-            let modified = metadata.modified()?.duration_since(std::time::UNIX_EPOCH)?.as_secs();
+            let modified = metadata
+                .modified()?
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_secs();
             if (now as u64) - modified > retention_secs {
                 fs::remove_file(&path)?;
                 println!("🗑️ 已清理旧备份文件: {:?}", path);
