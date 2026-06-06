@@ -127,6 +127,37 @@ pub async fn get_user_rank(pool: &SqlitePool, score: i64) -> Result<i64, Error> 
     Ok(row.0 + 1)
 }
 
+pub async fn get_user_count(pool: &SqlitePool) -> Result<i64, Error> {
+    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM roll_user")
+        .fetch_one(pool)
+        .await?;
+
+    Ok(row.0)
+}
+
+pub async fn get_user_rank_in_team(
+    pool: &SqlitePool,
+    score: i64,
+    team_name: &str,
+) -> Result<i64, Error> {
+    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM roll_user WHERE team_name = ? AND score > ?")
+        .bind(team_name)
+        .bind(score)
+        .fetch_one(pool)
+        .await?;
+
+    Ok(row.0 + 1)
+}
+
+pub async fn get_team_member_count(pool: &SqlitePool, team_name: &str) -> Result<i64, Error> {
+    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM roll_user WHERE team_name = ?")
+        .bind(team_name)
+        .fetch_one(pool)
+        .await?;
+
+    Ok(row.0)
+}
+
 pub async fn get_all_teams(pool: &SqlitePool) -> Result<Vec<RollTeam>, Error> {
     let teams = sqlx::query_as("SELECT name, score FROM roll_team ORDER BY score DESC")
         .fetch_all(pool)

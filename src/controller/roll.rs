@@ -4,10 +4,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Json},
 };
-use hex;
-use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::env;
@@ -16,8 +13,9 @@ use std::sync::Arc;
 use super::ApiResponse;
 use super::wechat::get_wechat_session;
 use crate::dao::roll::{
-    add_user_score, create_team_if_not_exists, get_all_teams, get_user_by_openid, get_user_rank,
-    update_user_team, upsert_user_session,
+    add_user_score, create_team_if_not_exists, get_all_teams, get_team_member_count,
+    get_user_by_openid, get_user_count, get_user_rank, get_user_rank_in_team, update_user_team,
+    upsert_user_session,
 };
 
 #[derive(Deserialize)]
@@ -57,17 +55,13 @@ pub struct ScoreRequest {
     pub score: i64,
 }
 
-type HmacSha256 = Hmac<Sha256>;
-
 fn verify_signature(session_key: &str, data: &str, signature: &str) -> bool {
-    let mut mac = match HmacSha256::new_from_slice(session_key.as_bytes()) {
-        Ok(m) => m,
-        Err(_) => return false,
-    };
-    mac.update(data.as_bytes());
-    let result = mac.finalize();
-    let expected_signature = hex::encode(result.into_bytes());
-    signature == expected_signature
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for b in session_key.as_bytes().iter().chain(data.as_bytes()) {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{:x}", hash) == signature
 }
 
 pub async fn login(
@@ -125,17 +119,35 @@ pub async fn login(
                 };
 
                 let user_rank = get_user_rank(pool.as_ref(), user.score).await.unwrap_or(1);
+                let user_count = get_user_count(pool.as_ref()).await.unwrap_or(1);
+                let user_rank_percent = if user_count > 0 {
+                    let denominator = user_count.max(100);
+                    (user_rank as f64 / denominator as f64 * 100.0).ceil() as i64
+                } else {
+                    100
+                };
+
+                // Get team rank percent (user rank within their team)
+                let mut team_rank_percent = None;
+                if let Some(ref team_name) = user.team_name {
+                    let team_user_rank = get_user_rank_in_team(pool.as_ref(), user.score, team_name)
+                        .await
+                        .unwrap_or(1);
+                    let team_user_count = get_team_member_count(pool.as_ref(), team_name)
+                        .await
+                        .unwrap_or(1);
+                    if team_user_count > 0 {
+                        let denominator = team_user_count.max(100);
+                        team_rank_percent = Some(
+                            (team_user_rank as f64 / denominator as f64 * 100.0).ceil() as i64,
+                        );
+                    }
+                }
 
                 let teams_data = get_all_teams(pool.as_ref()).await.unwrap_or_default();
-                let mut team_rank_val = 0;
                 let mut teams = Vec::new();
 
-                for (i, t) in teams_data.into_iter().enumerate() {
-                    if let Some(ref user_team) = user.team_name {
-                        if &t.name == user_team {
-                            team_rank_val = i as i64 + 1;
-                        }
-                    }
+                for t in teams_data {
                     teams.push(Team {
                         name: t.name,
                         score: t.score.to_string(),
@@ -147,9 +159,9 @@ pub async fn login(
                     session_key: session_key.to_string(),
                     team: user.team_name,
                     score: user.score,
-                    rank: user_rank.to_string(),
-                    team_rank: if team_rank_val > 0 {
-                        team_rank_val.to_string()
+                    rank: format!("{}%", user_rank_percent),
+                    team_rank: if let Some(p) = team_rank_percent {
+                        format!("{}%", p)
                     } else {
                         "-".to_string()
                     },

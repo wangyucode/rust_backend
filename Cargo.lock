@@ -1915,8 +1915,6 @@ dependencies = [
  "dotenv",
  "file-id",
  "glob",
- "hex",
- "hmac",
  "jsonwebtoken",
  "lazy_static",
  "lettre 0.10.4",
