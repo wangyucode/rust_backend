@@ -20,6 +20,8 @@ struct DbFileState {
     file_name: String,
     file_id: Option<String>,
     offset: i64,
+    #[allow(dead_code)]
+    updated_at: i64,
 }
 
 #[derive(Debug, Deserialize)]

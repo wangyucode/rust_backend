@@ -77,27 +77,96 @@ async fn run_caddy_log_schema(pool: &SqlitePool) -> Result<()> {
     .execute(pool)
     .await?;
 
+    // 创建索引
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_caddy_access_log_ts ON caddy_access_log (ts)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_caddy_access_log_domain ON caddy_access_log (domain)")
+        .execute(pool)
+        .await?;
+
     Ok(())
 }
 
+// =============================================================================
+// LEGACY MIGRATION: 计划在 2026-07 之后移除
+// =============================================================================
+/// 一次性逻辑：将旧版存储在主库中的日志数据搬迁到独立的日志数据库
+async fn migrate_legacy_logs_to_standalone(main_pool: &SqlitePool) -> Result<()> {
+    // 1. 检查主库中是否存在旧表数据（如果表不存在或没数据，则跳过）
+    let old_data_exists: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='caddy_file_state'",
+    )
+    .fetch_one(main_pool)
+    .await?;
+
+    if old_data_exists.0 == 0 {
+        return Ok(());
+    }
+
+    println!("🔄 [Legacy Migration] 检测到旧版日志数据，正在搬迁至独立数据库...");
+
+    // 使用直接连接执行 ATTACH (SQLite 不允许在事务中执行 ATTACH)
+    let mut conn = main_pool.acquire().await?;
+
+    sqlx::query(&format!("ATTACH DATABASE '{}' AS log_db", LOG_DB_FILE))
+        .execute(&mut *conn)
+        .await?;
+
+    // 搬迁状态数据
+    sqlx::query(
+        "INSERT OR IGNORE INTO log_db.caddy_file_state SELECT * FROM main.caddy_file_state",
+    )
+    .execute(&mut *conn)
+    .await?;
+
+    // 搬迁日志数据（如果有 caddy_access_log 表）
+    let has_log_table: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='caddy_access_log'",
+    )
+    .fetch_one(main_pool)
+    .await?;
+
+    if has_log_table.0 > 0 {
+        sqlx::query(
+            "INSERT OR IGNORE INTO log_db.caddy_access_log SELECT * FROM main.caddy_access_log",
+        )
+        .execute(&mut *conn)
+        .await?;
+    }
+
+    sqlx::query("DETACH DATABASE log_db")
+        .execute(&mut *conn)
+        .await?;
+
+    println!("✅ [Legacy Migration] 数据搬迁完成。旧表将由 SQL 迁移脚本清理。");
+    Ok(())
+}
+// =============================================================================
+
 /// 初始化主数据库连接池 + 执行主库迁移
 pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
-    // 确保日志数据库文件存在，以便迁移脚本可以 ATTACH 它
+    // 确保日志数据库文件存在
     if !Path::new(LOG_DB_FILE).exists() {
         if let Some(parent) = Path::new(LOG_DB_FILE).parent() {
-            std::fs::create_dir_all(parent)?;
+            if !parent.exists() {
+                std::fs::create_dir_all(parent)?;
+            }
         }
         std::fs::File::create(LOG_DB_FILE)?;
     }
 
     let pool = init_pool(MAIN_DB_FILE, 4).await?;
 
+    // 执行一次性搬迁逻辑 (必须在 SQL 迁移脚本 DROP 表之前运行)
+    if let Err(e) = migrate_legacy_logs_to_standalone(&pool).await {
+        eprintln!("⚠️ [Legacy Migration] 日志搬迁失败: {:?}", e);
+    }
+
     let migrations_dir = Path::new("./db/migrations");
     if migrations_dir.exists() {
         let migrator = Migrator::new(migrations_dir).await?;
         migrator.run(&pool).await?;
-    } else {
-        eprintln!("⚠️  未找到迁移目录: {}", migrations_dir.display());
     }
 
     Ok(Arc::new(pool))
