@@ -1,27 +1,87 @@
 use anyhow::Result;
-use sqlx::{SqlitePool, migrate::Migrator, sqlite::SqlitePoolOptions};
+use sqlx::{migrate::Migrator, sqlite::SqlitePoolOptions, SqlitePool};
 use std::path::Path;
 use std::sync::Arc;
 
-/// 初始化数据库连接池 + 执行迁移
-pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
-    // 从环境变量读取数据库URL
-    let db_file = "./db/sqlite.db";
-    // 文件不存在时，创建文件
-    if !Path::new(&db_file).exists() {
-        std::fs::create_dir_all(Path::new(&db_file).parent().unwrap())?;
-        std::fs::File::create(&db_file)?;
+const MAIN_DB_FILE: &str = "./db/sqlite.db";
+const LOG_DB_FILE: &str = "./db/access_log.db";
+
+async fn init_pool(db_file: &str, max_connections: u32) -> Result<SqlitePool> {
+    if !Path::new(db_file).exists() {
+        if let Some(parent) = Path::new(db_file).parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::File::create(db_file)?;
     }
 
     let db_url = format!("sqlite://{}", db_file);
-
-    // 创建连接池
     let pool = SqlitePoolOptions::new()
-        .max_connections(4)
+        .max_connections(max_connections)
         .connect(&db_url)
         .await?;
 
-    // 执行迁移：加载migrations目录下的所有未执行脚本
+    Ok(pool)
+}
+
+async fn run_caddy_log_schema(pool: &SqlitePool) -> Result<()> {
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS caddy_file_state (
+            file_name TEXT PRIMARY KEY,
+            file_id TEXT,
+            offset INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS caddy_access_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts REAL NOT NULL,
+            level TEXT,
+            logger TEXT,
+            msg TEXT,
+            remote_ip TEXT,
+            remote_port INTEGER,
+            client_ip TEXT,
+            proto TEXT,
+            method TEXT,
+            host TEXT,
+            uri TEXT,
+            req_headers TEXT,
+            tls TEXT,
+            bytes_read INTEGER,
+            user_id TEXT,
+            duration REAL,
+            size INTEGER,
+            status INTEGER,
+            resp_headers TEXT,
+            domain TEXT
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+/// 初始化主数据库连接池 + 执行主库迁移
+pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
+    // 确保日志数据库文件存在，以便迁移脚本可以 ATTACH 它
+    if !Path::new(LOG_DB_FILE).exists() {
+        if let Some(parent) = Path::new(LOG_DB_FILE).parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::File::create(LOG_DB_FILE)?;
+    }
+
+    let pool = init_pool(MAIN_DB_FILE, 4).await?;
+
     let migrations_dir = Path::new("./db/migrations");
     if migrations_dir.exists() {
         let migrator = Migrator::new(migrations_dir).await?;
@@ -30,5 +90,12 @@ pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
         eprintln!("⚠️  未找到迁移目录: {}", migrations_dir.display());
     }
 
+    Ok(Arc::new(pool))
+}
+
+/// 初始化 Caddy 日志数据库连接池
+pub async fn init_log_database_pool() -> Result<Arc<SqlitePool>> {
+    let pool = init_pool(LOG_DB_FILE, 2).await?;
+    run_caddy_log_schema(&pool).await?;
     Ok(Arc::new(pool))
 }
