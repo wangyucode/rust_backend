@@ -12,6 +12,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time;
 
 const LOG_DIR: &str = "db/caddy-access-logs";
+const LOG_RETENTION_DAYS: f64 = 7.0;
 
 #[derive(Debug, sqlx::FromRow)]
 struct DbFileState {
@@ -256,7 +257,7 @@ async fn insert_batch(pool: &SqlitePool, logs: &[(String, CaddyLog)]) -> Result<
 
 pub async fn clean_old_logs(pool: &SqlitePool) -> Result<()> {
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64();
-    let threshold = now - (30.0 * 24.0 * 60.0 * 60.0);
+    let threshold = now - (LOG_RETENTION_DAYS * 24.0 * 60.0 * 60.0);
 
     sqlx::query("DELETE FROM caddy_access_log WHERE ts < ?")
         .bind(threshold)

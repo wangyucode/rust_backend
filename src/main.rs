@@ -8,7 +8,7 @@ use crate::controller::roll;
 use crate::controller::state;
 use crate::controller::wechat;
 use crate::controller::yml;
-use crate::dao::database::init_database_pool;
+use crate::dao::database::{init_database_pool, init_log_database_pool};
 use axum::{
     Router,
     routing::{get, post},
@@ -40,9 +40,11 @@ async fn main() -> std::io::Result<()> {
 
     // 初始化数据库连接池
     let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
+    let log_pool = init_log_database_pool().await.expect("❌ Caddy日志数据库初始化错误");
 
     let pool_for_after_startup = Arc::clone(&pool);
-    match after_startup::after_startup(&pool_for_after_startup).await {
+    let log_pool_for_after_startup = Arc::clone(&log_pool);
+    match after_startup::after_startup(&pool_for_after_startup, &log_pool_for_after_startup).await {
         Ok(_) => println!("✅ 业务逻辑启动成功"),
         Err(e) => {
             eprintln!("❌ 业务逻辑启动失败: {:?}", e);

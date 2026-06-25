@@ -9,7 +9,7 @@ use std::time::Duration;
 use tokio::time;
 
 /// 启动每日任务
-pub fn start_daily_tasks(pool: Arc<SqlitePool>) {
+pub fn start_daily_tasks(main_pool: Arc<SqlitePool>, log_pool: Arc<SqlitePool>) {
     tokio::spawn(async move {
         // tokio::time::interval 默认会在第一次 tick().await 时立即返回
         let mut interval = time::interval(Duration::from_secs(24 * 60 * 60));
@@ -17,7 +17,7 @@ pub fn start_daily_tasks(pool: Arc<SqlitePool>) {
             interval.tick().await;
 
             // 1. 备份数据库 (第一步)
-            if let Err(e) = backup_database(&pool).await {
+            if let Err(e) = backup_database(&main_pool).await {
                 eprintln!("❌ 数据库备份失败: {:?}", e);
             }
 
@@ -27,12 +27,12 @@ pub fn start_daily_tasks(pool: Arc<SqlitePool>) {
             }
 
             // 3. 清理访问记录 (30天前)
-            if let Err(e) = blog::clean_old_visits(&pool).await {
+            if let Err(e) = blog::clean_old_visits(&main_pool).await {
                 eprintln!("❌ 清理旧访问记录失败: {:?}", e);
             }
 
-            // 4. 清理 Caddy 旧日志 (30天前)
-            if let Err(e) = caddy::clean_old_logs(&pool).await {
+            // 4. 清理 Caddy 旧日志 (7天前)
+            if let Err(e) = caddy::clean_old_logs(&log_pool).await {
                 eprintln!("❌ Caddy旧日志清理失败: {:?}", e);
             }
         }
