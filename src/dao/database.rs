@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 const MAIN_DB_FILE: &str = "./db/sqlite.db";
-const LOG_DB_FILE: &str = "./db/caddy_access_log.db";
+const LOG_DB_FILE: &str = "./db/access_log.db";
 
 async fn init_pool(db_file: &str, max_connections: u32) -> Result<SqlitePool> {
     if !Path::new(db_file).exists() {
@@ -70,18 +70,16 @@ async fn run_caddy_log_schema(pool: &SqlitePool) -> Result<()> {
     Ok(())
 }
 
-async fn cleanup_legacy_caddy_tables(pool: &SqlitePool) -> Result<()> {
-    sqlx::query("DROP TABLE IF EXISTS caddy_access_log")
-        .execute(pool)
-        .await?;
-    sqlx::query("DROP TABLE IF EXISTS caddy_file_state")
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
 /// 初始化主数据库连接池 + 执行主库迁移
 pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
+    // 确保日志数据库文件存在，以便迁移脚本可以 ATTACH 它
+    if !Path::new(LOG_DB_FILE).exists() {
+        if let Some(parent) = Path::new(LOG_DB_FILE).parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::File::create(LOG_DB_FILE)?;
+    }
+
     let pool = init_pool(MAIN_DB_FILE, 4).await?;
 
     let migrations_dir = Path::new("./db/migrations");
@@ -91,8 +89,6 @@ pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
     } else {
         eprintln!("⚠️  未找到迁移目录: {}", migrations_dir.display());
     }
-
-    cleanup_legacy_caddy_tables(&pool).await?;
 
     Ok(Arc::new(pool))
 }
