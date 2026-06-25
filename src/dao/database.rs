@@ -1,5 +1,9 @@
 use anyhow::Result;
-use sqlx::{migrate::Migrator, sqlite::SqlitePoolOptions, SqlitePool};
+use sqlx::{
+    migrate::Migrator,
+    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
+    SqlitePool,
+};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -7,17 +11,23 @@ const MAIN_DB_FILE: &str = "./db/sqlite.db";
 const LOG_DB_FILE: &str = "./db/access_log.db";
 
 async fn init_pool(db_file: &str, max_connections: u32) -> Result<SqlitePool> {
-    if !Path::new(db_file).exists() {
-        if let Some(parent) = Path::new(db_file).parent() {
+    // 确保父目录存在
+    if let Some(parent) = Path::new(db_file).parent() {
+        if !parent.exists() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::File::create(db_file)?;
     }
 
-    let db_url = format!("sqlite://{}", db_file);
+    let options = SqliteConnectOptions::new()
+        .filename(db_file)
+        .journal_mode(SqliteJournalMode::Wal)
+        .synchronous(SqliteSynchronous::Normal)
+        .foreign_keys(true)
+        .create_if_missing(true);
+
     let pool = SqlitePoolOptions::new()
         .max_connections(max_connections)
-        .connect(&db_url)
+        .connect_with(options)
         .await?;
 
     Ok(pool)
