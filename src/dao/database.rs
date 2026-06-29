@@ -7,8 +7,8 @@ use sqlx::{
 use std::path::Path;
 use std::sync::Arc;
 
-const MAIN_DB_FILE: &str = "./db/sqlite.db";
-const LOG_DB_FILE: &str = "./db/access_log.db";
+const MAIN_DB_FILE: &str = "./data/db/sqlite.db";
+const LOG_DB_FILE: &str = "./data/db/access_log.db";
 
 async fn init_pool(db_file: &str, max_connections: u32) -> Result<SqlitePool> {
     // 确保父目录存在
@@ -92,7 +92,7 @@ async fn run_caddy_log_schema(pool: &SqlitePool) -> Result<()> {
 pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
     let pool = init_pool(MAIN_DB_FILE, 4).await?;
 
-    let migrations_dir = Path::new("./db/migrations");
+    let migrations_dir = Path::new("./data/migrations");
     if migrations_dir.exists() {
         let migrator = Migrator::new(migrations_dir).await?;
         migrator.run(&pool).await?;

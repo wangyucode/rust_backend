@@ -37,7 +37,7 @@ pub async fn get_yml(Path(path): Path<String>, headers: HeaderMap) -> impl IntoR
         return return_error(StatusCode::BAD_REQUEST, "Invalid path".to_string());
     }
 
-    let file_path = PathBuf::from("db/yml").join(&path);
+    let file_path = PathBuf::from("data/yml").join(&path);
 
     if !file_path.exists() {
         return return_error(StatusCode::NOT_FOUND, "File not found".to_string());

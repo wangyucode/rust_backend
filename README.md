@@ -60,10 +60,11 @@ rust_backend/
 │   ├── after_startup.rs # 启动后任务
 │   ├── openapi.yml      # OpenAPI 定义
 │   └── main.rs          # 应用入口
-├── db/                  # 数据库相关
+├── data/                # 数据目录
 │   ├── migrations/      # 数据库迁移文件
 │   │   └── 20251217100000_init_tables.sql  # 初始化表结构
-│   └── sqlite.db        # SQLite 数据库文件
+│   └── db/              # SQLite 数据库文件
+│       └── sqlite.db
 ├── .gitignore
 ├── Cargo.lock
 └── Cargo.toml
@@ -96,14 +97,14 @@ This project uses SQLite as the database, with asynchronous database operations 
 
 ### 数据库文件 (Database File)
 
-- 数据库文件路径: `./db/sqlite.db`
-- Database file path: `./db/sqlite.db`
+- 数据库文件路径: `./data/db/sqlite.db`
+- Database file path: `./data/db/sqlite.db`
 
 ### 数据库迁移 (Database Migrations)
 
-数据库迁移文件存放在 `./db/migrations/` 目录下，使用时间戳命名格式。
+数据库迁移文件存放在 `./data/migrations/` 目录下，使用时间戳命名格式。
 
-Database migration files are stored in the `./db/migrations/` directory, using timestamp naming format.
+Database migration files are stored in the `./data/migrations/` directory, using timestamp naming format.
 
 - 初始化迁移文件: `20251217100000_init_tables.sql`
 - Initial migration file: `20251217100000_init_tables.sql`
@@ -114,7 +115,7 @@ Database migration files are stored in the `./db/migrations/` directory, using t
 
 项目会自动将 Caddy 的 JSON 访问日志导入到 SQLite 数据库中。
 
-- **日志目录**: `db/caddy-access-logs/`
+- **日志目录**: `data/caddy-access-logs/`
 - **文件命名**: `<domain>.access.log` (例如 `wycode.cn.access.log`)
 - **执行频率**: 每 5 秒轮询一次。
 - **数据保留**: 自动清理超过 30 天的日志记录。
@@ -122,7 +123,7 @@ Database migration files are stored in the `./db/migrations/` directory, using t
 
 The project automatically ingests Caddy's JSON access logs into the SQLite database.
 
-- **Log Directory**: `db/caddy-access-logs/`
+- **Log Directory**: `data/caddy-access-logs/`
 - **File Naming**: `<domain>.access.log` (e.g., `wycode.cn.access.log`)
 - **Frequency**: Polling every 5 seconds.
 - **Retention**: Automatically cleans up logs older than 30 days.

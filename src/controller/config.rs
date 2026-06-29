@@ -13,9 +13,10 @@ pub struct ConfigQuery {
     pub key: String,
 }
 
+// 考虑移除此接口 260629
 pub async fn get_config(Query(query): Query<ConfigQuery>) -> impl IntoResponse {
     let key = &query.key;
-    let file_path = format!("./db/config/{}.json", key);
+    let file_path = format!("./data/config/{}.json", key);
     let path = Path::new(&file_path);
 
     if !path.exists() {

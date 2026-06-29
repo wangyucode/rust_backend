@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time;
 
-const LOG_DIR: &str = "db/caddy-access-logs";
+const LOG_DIR: &str = "data/caddy-access-logs";
 const LOG_RETENTION_DAYS: f64 = 7.0;
 
 #[derive(Debug, sqlx::FromRow)]

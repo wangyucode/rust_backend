@@ -41,7 +41,7 @@ pub fn start_daily_tasks(main_pool: Arc<SqlitePool>, log_pool: Arc<SqlitePool>) 
 
 /// 备份 SQLite 数据库
 async fn backup_database(pool: &SqlitePool) -> anyhow::Result<()> {
-    let backup_dir = "./db/backups";
+    let backup_dir = "./data/backups";
     if !Path::new(backup_dir).exists() {
         fs::create_dir_all(backup_dir)?;
     }
@@ -60,7 +60,7 @@ async fn backup_database(pool: &SqlitePool) -> anyhow::Result<()> {
 
 /// 清理旧备份，仅保留最近 7 天的数据库备份
 fn clean_old_backups() -> anyhow::Result<()> {
-    let backup_dir = "./db/backups";
+    let backup_dir = "./data/backups";
     if !Path::new(backup_dir).exists() {
         return Ok(());
     }
