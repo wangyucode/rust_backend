@@ -1,8 +1,6 @@
 use crate::controller::blog;
 use crate::controller::clipboard;
 use crate::controller::comment;
-use crate::controller::config;
-use crate::controller::coze;
 use crate::controller::email;
 use crate::controller::roll;
 use crate::controller::state;
@@ -64,8 +62,6 @@ async fn main() -> std::io::Result<()> {
         .route("/clipboard/openid/:openid", get(clipboard::get_by_openid))
         .route("/clipboard/wx/:code", get(clipboard::get_by_wx_code))
         .route("/clipboard", post(clipboard::save_by_id))
-        .route("/coze/token", get(coze::get_token))
-        .route("/config", get(config::get_config))
         .route("/blog-view", get(blog::record_blog_view))
         .route("/popular-posts", get(blog::get_popular_posts))
         .route("/roll/login", post(roll::login))

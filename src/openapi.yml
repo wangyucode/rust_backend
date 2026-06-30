@@ -292,33 +292,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
 
-  # Coze API
-  /coze/token:
-    get:
-      tags:
-        - Coze
-      summary: Get Coze access token
-      description: Retrieves an access token for Coze API using OAuth JWT authentication
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponse"
-        "400":
-          description: Bad request (missing configuration)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponse"
-
   # Blog API
   /blog-view:
     get:
@@ -444,7 +417,6 @@ components:
           oneOf:
             - type: object
               description: Response data (for data success)
-            - $ref: "#/components/schemas/CozeTokenResponse"
             - $ref: "#/components/schemas/PopularPostsResponse"
           description: Response data (for data success)
       example:
@@ -537,24 +509,6 @@ components:
       example:
         _id: "clipboard_123"
         content: "Clipboard text content"
-
-    # Coze API schemas
-    CozeTokenResponse:
-      type: object
-      properties:
-        access_token:
-          type: string
-          description: Coze API access token
-        token_type:
-          type: string
-          description: Token type (usually "Bearer")
-        expires_in:
-          type: integer
-          description: Token expiration time in seconds
-      example:
-        access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
-        token_type: "Bearer"
-        expires_in: 900
 
     # Blog API schemas
     PopularPost:
