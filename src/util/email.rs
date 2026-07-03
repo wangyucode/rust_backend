@@ -21,7 +21,7 @@ fn generate_email_hash(subject: &str, content: &str) -> String {
     hasher.update(b"|"); // 使用分隔符确保不同组合的唯一性
     hasher.update(content.as_bytes());
     let result = hasher.finalize();
-    format!("{:x}", result)
+    result.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
 // 清理过期的缓存条目（超过1小时的条目将被清理）
