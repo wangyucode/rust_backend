@@ -6,6 +6,7 @@ use crate::controller::roll;
 use crate::controller::state;
 use crate::controller::wechat;
 use crate::controller::yml;
+use crate::controller::ai;
 use crate::dao::database::{init_database_pool, init_log_database_pool};
 use axum::{
     Router,
@@ -71,7 +72,8 @@ async fn main() -> std::io::Result<()> {
             "/openapi.yml",
             get(|| async { include_str!("openapi.yml") }),
         )
-        .route("/yml/*path", get(yml::get_yml));
+        .route("/yml/*path", get(yml::get_yml))
+        .route("/ai", post(ai::chat_handler));
 
     // 组装应用
     let app = Router::default()

@@ -41,3 +41,4 @@ pub mod roll;
 pub mod state;
 pub mod wechat;
 pub mod yml;
+pub mod ai;

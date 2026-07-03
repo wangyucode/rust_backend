@@ -22,7 +22,7 @@ lettre_email = "0.9"
 dotenv = "0.15"
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
-reqwest = { version = "0.12", features = ["json", "blocking"] }
+reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
 chrono = "0.4"
 sqlx = { version = "0.7", features = [
     "sqlite",
@@ -39,3 +39,4 @@ tracing-subscriber = "0.3.22"
 serde_yaml = "0.9.34"
 glob = "0.3.3"
 file-id = "0.2.3"
+tokio-stream = "0.1.18"
