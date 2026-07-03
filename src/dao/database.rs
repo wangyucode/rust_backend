@@ -33,61 +33,6 @@ async fn init_pool(db_file: &str, max_connections: u32) -> Result<SqlitePool> {
     Ok(pool)
 }
 
-async fn run_caddy_log_schema(pool: &SqlitePool) -> Result<()> {
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS caddy_file_state (
-            file_name TEXT PRIMARY KEY,
-            file_id TEXT,
-            offset INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
-        )
-        "#,
-    )
-    .execute(pool)
-    .await?;
-
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS caddy_access_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts REAL NOT NULL,
-            level TEXT,
-            logger TEXT,
-            msg TEXT,
-            remote_ip TEXT,
-            remote_port INTEGER,
-            client_ip TEXT,
-            proto TEXT,
-            method TEXT,
-            host TEXT,
-            uri TEXT,
-            req_headers TEXT,
-            tls TEXT,
-            bytes_read INTEGER,
-            user_id TEXT,
-            duration REAL,
-            size INTEGER,
-            status INTEGER,
-            resp_headers TEXT,
-            domain TEXT
-        )
-        "#,
-    )
-    .execute(pool)
-    .await?;
-
-    // 创建索引
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_caddy_access_log_ts ON caddy_access_log (ts)")
-        .execute(pool)
-        .await?;
-    sqlx::query("CREATE INDEX IF NOT EXISTS idx_caddy_access_log_domain ON caddy_access_log (domain)")
-        .execute(pool)
-        .await?;
-
-    Ok(())
-}
-
 /// 初始化主数据库连接池 + 执行主库迁移
 pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
     let pool = init_pool(MAIN_DB_FILE, 4).await?;
@@ -104,6 +49,12 @@ pub async fn init_database_pool() -> Result<Arc<SqlitePool>> {
 /// 初始化 Caddy 日志数据库连接池
 pub async fn init_log_database_pool() -> Result<Arc<SqlitePool>> {
     let pool = init_pool(LOG_DB_FILE, 2).await?;
-    run_caddy_log_schema(&pool).await?;
+    
+    let migrations_dir = Path::new("./data/migrations_log");
+    if migrations_dir.exists() {
+        let migrator = Migrator::new(migrations_dir).await?;
+        migrator.run(&pool).await?;
+    }
+    
     Ok(Arc::new(pool))
 }

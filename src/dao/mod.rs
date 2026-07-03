@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod app;
 pub mod blog;
 pub mod clipboard;

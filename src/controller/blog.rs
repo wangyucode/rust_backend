@@ -5,8 +5,8 @@ use axum::{
 };
 use chrono::Utc;
 use serde::Deserialize;
-use sqlx::SqlitePool;
 use std::sync::Arc;
+use crate::app_state::AppState;
 
 use super::ApiResponse;
 use crate::dao::blog as blog_dao;
@@ -33,9 +33,10 @@ fn default_limit() -> i64 {
 }
 
 pub async fn record_blog_view(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     Query(query): Query<BlogViewQuery>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     let blog_id = query.id.clone();
 
     // 获取当前时间戳（毫秒）
@@ -58,9 +59,10 @@ pub async fn record_blog_view(
 }
 
 pub async fn get_popular_posts(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     Query(query): Query<PopularPostsQuery>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     // Ensure days doesn't exceed 30
     let days = query.days.min(30);
     let limit = query.limit;

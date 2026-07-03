@@ -1,4 +1,5 @@
 use crate::dao::blog;
+use crate::dao::ai as ai_dao;
 use crate::task::caddy;
 use chrono::Local;
 use sqlx::SqlitePool;
@@ -34,6 +35,11 @@ pub fn start_daily_tasks(main_pool: Arc<SqlitePool>, log_pool: Arc<SqlitePool>) 
             // 4. 清理 Caddy 旧日志 (7天前)
             if let Err(e) = caddy::clean_old_logs(&log_pool).await {
                 eprintln!("❌ Caddy旧日志清理失败: {:?}", e);
+            }
+
+            // 5. 清理 AI 旧消息 (7天前)
+            if let Err(e) = ai_dao::clean_old_messages(&main_pool).await {
+                eprintln!("❌ 清理旧 AI 消息失败: {:?}", e);
             }
         }
     });

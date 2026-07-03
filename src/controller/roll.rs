@@ -5,10 +5,10 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
+use crate::app_state::AppState;
 
 use super::ApiResponse;
 use super::wechat::get_wechat_session;
@@ -77,9 +77,11 @@ fn verify_signature(session_key: &str, data: &str, signature: &str) -> bool {
 }
 
 pub async fn login(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     AxumJson(body): AxumJson<LoginRequest>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
+    let client = &state.client;
     if body.platform != "wechat" {
         return (
             StatusCode::BAD_REQUEST,
@@ -102,7 +104,7 @@ pub async fn login(
     let appid = env::var("WX_APPID_ROLL").unwrap_or_default();
     let secret = env::var("WX_SECRET_ROLL").unwrap_or_default();
 
-    match get_wechat_session(&appid, &secret, code).await {
+    match get_wechat_session(client, &appid, &secret, code).await {
         Ok(session_info) => {
             let openid = session_info.get("openid").and_then(|id| id.as_str());
             let session_key = session_info.get("session_key").and_then(|sk| sk.as_str());
@@ -203,9 +205,10 @@ pub async fn login(
 }
 
 pub async fn set_team(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     AxumJson(body): AxumJson<SetTeamRequest>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     let team_name = match body.team.as_deref() {
         Some(t) if t.trim().is_empty() => None,
         Some(t) => Some(t.trim()),
@@ -246,9 +249,10 @@ pub async fn set_team(
 }
 
 pub async fn report_score(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     AxumJson(body): AxumJson<ScoreRequest>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     let user = match get_user_by_openid(pool.as_ref(), &body.openid).await {
         Ok(Some(u)) => u,
         _ => {

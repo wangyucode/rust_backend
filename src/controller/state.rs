@@ -1,6 +1,11 @@
-use axum::response::{IntoResponse, Json};
+use axum::{
+    extract::State,
+    response::{IntoResponse, Json},
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use std::sync::Arc;
+use crate::app_state::AppState;
 
 use super::ApiResponse;
 
@@ -12,7 +17,7 @@ struct DataResult {
     version: String,
 }
 
-pub async fn state() -> impl IntoResponse {
+pub async fn state(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
     let data = DataResult {
         state: "UP".to_string(),
         time: std::time::SystemTime::now()
