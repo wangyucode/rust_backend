@@ -1,10 +1,8 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 use reqwest::Client;
-
 pub struct AppState {
     pub pool: Arc<SqlitePool>,
-    pub log_pool: Arc<SqlitePool>,
     pub client: Client,
     pub ai_config: AiConfig,
 }
@@ -16,7 +14,7 @@ pub struct AiConfig {
 }
 
 impl AppState {
-    pub fn new(pool: Arc<SqlitePool>, log_pool: Arc<SqlitePool>) -> Self {
+    pub fn new(pool: Arc<SqlitePool>) -> Self {
         let api_key = std::env::var("AI_API_KEY").unwrap_or_default();
         if api_key.is_empty() {
             eprintln!("⚠️  AI_API_KEY not configured, AI features may fail");
@@ -26,7 +24,6 @@ impl AppState {
 
         Self {
             pool,
-            log_pool,
             client: Client::new(),
             ai_config: AiConfig {
                 api_key,

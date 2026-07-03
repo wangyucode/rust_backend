@@ -43,7 +43,7 @@ async fn main() -> std::io::Result<()> {
     let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
     let log_pool = init_log_database_pool().await.expect("❌ Caddy日志数据库初始化错误");
 
-    let state = Arc::new(AppState::new(pool.clone(), log_pool.clone()));
+    let state = Arc::new(AppState::new(pool.clone()));
 
     let pool_for_after_startup = Arc::clone(&pool);
     let log_pool_for_after_startup = Arc::clone(&log_pool);

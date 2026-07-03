@@ -173,8 +173,6 @@ pub async fn chat_handler(
             let lines = FramedRead::new(reader, LinesCodec::new());
 
             let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(100);
-            let pool = Arc::clone(&state.pool);
-            let user_id = chat_req.user_id.clone();
 
             // 后台持久化 AI 消息（带超时保护，防止客户端断开后永远等待）
             let pool = Arc::clone(&state.pool);
