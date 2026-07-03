@@ -57,9 +57,13 @@ async fn load_system_prompt() -> String {
         .join("prompt")
         .join("secretary.md");
 
-    tokio::fs::read_to_string(&prompt_path)
-        .await
-        .unwrap_or_else(|_| "You are a helpful assistant.".to_string())
+    match tokio::fs::read_to_string(&prompt_path).await {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("⚠️  Failed to load system prompt from {:?}: {}", prompt_path, e);
+            "You are a helpful assistant.".to_string()
+        }
+    }
 }
 
 pub async fn chat_handler(
@@ -172,16 +176,25 @@ pub async fn chat_handler(
             let pool = Arc::clone(&state.pool);
             let user_id = chat_req.user_id.clone();
 
-            // 后台持久化 AI 消息
+            // 后台持久化 AI 消息（带超时保护，防止客户端断开后永远等待）
+            let pool = Arc::clone(&state.pool);
+            let user_id = chat_req.user_id.clone();
             tokio::spawn(async move {
                 let mut full_content = String::new();
-                while let Some(content) = rx.recv().await {
-                    full_content.push_str(&content);
-                }
+                let timeout = tokio::time::timeout(
+                    std::time::Duration::from_secs(30),
+                    async {
+                        while let Some(content) = rx.recv().await {
+                            full_content.push_str(&content);
+                        }
+                    }
+                ).await;
                 if !full_content.is_empty() {
                     if let Err(e) = ai_dao::insert_message(&pool, &user_id, "assistant", &full_content).await {
                         eprintln!("Failed to persist assistant message: {:?}", e);
                     }
+                } else if timeout.is_err() {
+                    eprintln!("⚠️  AI stream timed out after 30s with no content");
                 }
             });
 

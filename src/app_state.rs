@@ -18,9 +18,12 @@ pub struct AiConfig {
 impl AppState {
     pub fn new(pool: Arc<SqlitePool>, log_pool: Arc<SqlitePool>) -> Self {
         let api_key = std::env::var("AI_API_KEY").unwrap_or_default();
+        if api_key.is_empty() {
+            eprintln!("⚠️  AI_API_KEY not configured, AI features may fail");
+        }
         let model = std::env::var("AI_MODEL").unwrap_or_default();
         let base_url = std::env::var("AI_BASE_URL").unwrap_or_default();
-        
+
         Self {
             pool,
             log_pool,
