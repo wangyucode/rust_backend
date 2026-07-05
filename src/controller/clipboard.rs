@@ -8,6 +8,7 @@ use rand;
 use sqlx::SqlitePool;
 use std::env;
 use std::sync::Arc;
+use crate::app_state::AppState;
 
 use super::ApiResponse;
 use super::wechat::get_wechat_session;
@@ -111,9 +112,10 @@ async fn create_clipboard_for_openid(pool: &SqlitePool, openid: &str) -> Respons
 
 // 根据id获取剪贴板内容的处理函数
 pub async fn get_by_id(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     Path(path): Path<ClipboardPath>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     // 验证id参数
     if path.id.is_empty() {
         return (
@@ -150,9 +152,10 @@ pub async fn get_by_id(
 
 // 根据openid获取剪贴板内容的处理函数
 pub async fn get_by_openid(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     Path(path): Path<ClipboardOpenidPath>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     // 验证openid参数
     if path.openid.is_empty() {
         return (
@@ -188,9 +191,10 @@ pub async fn get_by_openid(
 
 // 保存剪贴板内容的处理函数
 pub async fn save_by_id(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     AxumJson(body): AxumJson<SaveClipboardRequest>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     // 验证id参数
     if body.id.is_empty() {
         return (
@@ -252,9 +256,11 @@ pub async fn save_by_id(
 
 // 根据微信code获取剪贴板内容的处理函数
 pub async fn get_by_wx_code(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     Path(path): Path<ClipboardWxCodePath>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
+    let client = &state.client;
     // 验证code参数
     if path.code.is_empty() {
         return (
@@ -269,7 +275,7 @@ pub async fn get_by_wx_code(
     let secret = env::var("WX_SECRET_CLIPBOARD").unwrap_or_default();
 
     // 获取微信会话信息
-    match get_wechat_session(&appid, &secret, &path.code).await {
+    match get_wechat_session(client, &appid, &secret, &path.code).await {
         Ok(session) => {
             // 提取openid
             if let Some(openid) = session.get("openid").and_then(|id| id.as_str()) {

@@ -5,9 +5,9 @@ use axum::{
 };
 use chrono::{Local, TimeZone, Utc};
 use regex::Regex;
-use sqlx::SqlitePool;
 use std::sync::Arc;
 use uuid::Uuid;
+use crate::app_state::AppState;
 
 use super::ApiResponse;
 use crate::dao::comment::{
@@ -93,9 +93,10 @@ pub struct PostCommentBody {
 
 // 获取评论列表的处理函数
 pub async fn get_comments(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     Query(query): Query<CommentQuery>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     // 验证查询参数
     if query.a.is_empty() {
         return (
@@ -163,9 +164,10 @@ pub async fn get_comments(
 
 // 提交评论的处理函数
 pub async fn post_comment(
-    State(pool): State<Arc<SqlitePool>>,
+    State(state): State<Arc<AppState>>,
     AxumJson(body): AxumJson<PostCommentBody>,
 ) -> impl IntoResponse {
+    let pool = &state.pool;
     // 验证评论类型
     if body.c_type < 0 || body.c_type > 1 {
         return (

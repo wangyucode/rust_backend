@@ -2,7 +2,7 @@ name: Docker Build and Deploy
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "main" ]
   workflow_dispatch:
 
 jobs:

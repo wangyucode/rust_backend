@@ -6,13 +6,13 @@ use crate::controller::roll;
 use crate::controller::state;
 use crate::controller::wechat;
 use crate::controller::yml;
+use crate::controller::ai;
 use crate::dao::database::{init_database_pool, init_log_database_pool};
 use axum::{
     Router,
     routing::{get, post},
 };
 use dotenv::dotenv;
-use sqlx::SqlitePool;
 use std::env;
 use std::sync::Arc;
 use tower::ServiceBuilder;
@@ -22,10 +22,13 @@ use tower_http::normalize_path::NormalizePathLayer;
 use tower_http::trace::TraceLayer;
 
 mod after_startup;
+mod app_state;
 mod controller;
 mod dao;
 mod task;
 mod util;
+
+use app_state::AppState;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -40,6 +43,8 @@ async fn main() -> std::io::Result<()> {
     let pool = init_database_pool().await.expect("❌ 数据库初始化错误");
     let log_pool = init_log_database_pool().await.expect("❌ Caddy日志数据库初始化错误");
 
+    let state = Arc::new(AppState::new(pool.clone()));
+
     let pool_for_after_startup = Arc::clone(&pool);
     let log_pool_for_after_startup = Arc::clone(&log_pool);
     match after_startup::after_startup(&pool_for_after_startup, &log_pool_for_after_startup).await {
@@ -50,7 +55,7 @@ async fn main() -> std::io::Result<()> {
     };
 
     // 创建 API 路由
-    let api_routes: Router<Arc<SqlitePool>> = Router::default()
+    let api_routes: Router<Arc<AppState>> = Router::default()
         .route("/", get(state::state))
         .route("/email", post(email::send_email_handler))
         .route("/wechat/apps", get(wechat::get_apps))
@@ -71,13 +76,14 @@ async fn main() -> std::io::Result<()> {
             "/openapi.yml",
             get(|| async { include_str!("openapi.yml") }),
         )
-        .route("/yml/*path", get(yml::get_yml));
+        .route("/yml/*path", get(yml::get_yml))
+        .route("/ai", post(ai::chat_handler));
 
     // 组装应用
     let app = Router::default()
         .nest("/api/v1", api_routes)
         .route("/yml/*path", get(yml::get_yml))
-        .with_state(pool)
+        .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new());
 
