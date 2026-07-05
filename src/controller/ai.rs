@@ -223,8 +223,15 @@ pub async fn chat_handler(
                 }
             });
 
+            let message_id = format!("msg_{}", uuid::Uuid::new_v4().simple());
+            
+            let start_event = futures::stream::once(futures::future::ready(Ok::<Event, axum::Error>(
+                Event::default().event("message").data(format!(r#"{{"type":"text-start","id":"{}"}}"#, message_id))
+            )));
+
             let stream = lines.filter_map(move |result: Result<String, tokio_util::codec::LinesCodecError>| {
                 let tx = tx.clone();
+                let message_id = message_id.clone();
                 futures::future::ready(match result {
                     Ok(line) => {
                         if line.is_empty() {
@@ -232,18 +239,27 @@ pub async fn chat_handler(
                         } else if let Some(data_str) = line.strip_prefix("data: ") {
                             let data_str = data_str.trim();
                             if data_str == "[DONE]" {
-                                Some(Ok::<Event, axum::Error>(Event::default().event("message").data("[DONE]")))
+                                Some(Ok::<Event, axum::Error>(Event::default().event("message").data(format!(r#"{{"type":"text-end","id":"{}"}}"#, message_id))))
                             } else {
                                 // 尝试解析内容并发送到持久化通道
+                                let mut output_event = None;
                                 if let Ok(chunk) = serde_json::from_str::<ChatCompletionChunk>(data_str) {
                                     if let Some(choice) = chunk.choices.first() {
                                         if let Some(content) = &choice.delta.content {
                                             let _ = tx.try_send(content.clone());
+                                            
+                                            // 转换为 ai-sdk 格式
+                                            let chunk_json = serde_json::json!({
+                                                "type": "text-delta",
+                                                "id": message_id,
+                                                "delta": content
+                                            });
+                                            output_event = Some(Ok::<Event, axum::Error>(Event::default().event("message").data(chunk_json.to_string())));
                                         }
                                     }
                                 }
 
-                                Some(Ok::<Event, axum::Error>(Event::default().event("message").data(data_str)))
+                                output_event
                             }
                         } else {
                             None
@@ -251,12 +267,12 @@ pub async fn chat_handler(
                     }
                     Err(e) => {
                         eprintln!("Stream error: {}", e);
-                        Some(Ok::<Event, axum::Error>(Event::default().event("message").data("[ERROR]")))
+                        Some(Ok::<Event, axum::Error>(Event::default().event("message").data(format!(r#"{{"type":"error","errorText":"{}"}}"#, e))))
                     }
                 })
             });
 
-            Sse::new(stream).into_response()
+            Sse::new(start_event.chain(stream)).into_response()
         }
         Err(e) => {
             eprintln!("Failed to forward to AI API: {}", e);
