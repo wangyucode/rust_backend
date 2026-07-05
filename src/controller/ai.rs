@@ -19,7 +19,34 @@ pub struct ChatRequest {
 #[derive(Debug, Deserialize)]
 pub struct ChatMessage {
     pub role: String,
-    pub content: String,
+    pub content: Option<String>,
+    pub parts: Option<Vec<MessagePart>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MessagePart {
+    #[serde(rename = "type")]
+    pub part_type: String,
+    pub text: Option<String>,
+}
+
+impl ChatMessage {
+    pub fn get_content(&self) -> String {
+        if let Some(c) = &self.content {
+            if !c.is_empty() {
+                return c.clone();
+            }
+        }
+        if let Some(parts) = &self.parts {
+            return parts
+                .iter()
+                .filter(|p| p.part_type == "text")
+                .filter_map(|p| p.text.clone())
+                .collect::<Vec<_>>()
+                .join("\n");
+        }
+        String::new()
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -101,7 +128,7 @@ pub async fn chat_handler(
         let pool = Arc::clone(&state.pool);
         let user_id = chat_req.user_id.clone();
         let role = last_msg.role.clone();
-        let content = last_msg.content.clone();
+        let content = last_msg.get_content();
         tokio::spawn(async move {
             if let Err(e) = ai_dao::insert_message(&pool, &user_id, &role, &content).await {
                 eprintln!("Failed to persist user message: {:?}", e);
@@ -118,7 +145,7 @@ pub async fn chat_handler(
     for msg in &chat_req.messages {
         backend_messages.push(BackendMessage {
             role: msg.role.clone(),
-            content: msg.content.clone(),
+            content: msg.get_content(),
         });
     }
 
