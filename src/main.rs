@@ -63,9 +63,9 @@ async fn main() -> std::io::Result<()> {
             "/comment",
             get(comment::get_comments).post(comment::post_comment),
         )
-        .route("/clipboard/:id", get(clipboard::get_by_id))
-        .route("/clipboard/openid/:openid", get(clipboard::get_by_openid))
-        .route("/clipboard/wx/:code", get(clipboard::get_by_wx_code))
+        .route("/clipboard/{id}", get(clipboard::get_by_id))
+        .route("/clipboard/openid/{openid}", get(clipboard::get_by_openid))
+        .route("/clipboard/wx/{code}", get(clipboard::get_by_wx_code))
         .route("/clipboard", post(clipboard::save_by_id))
         .route("/blog-view", get(blog::record_blog_view))
         .route("/popular-posts", get(blog::get_popular_posts))
@@ -76,13 +76,13 @@ async fn main() -> std::io::Result<()> {
             "/openapi.yml",
             get(|| async { include_str!("openapi.yml") }),
         )
-        .route("/yml/*path", get(yml::get_yml))
+        .route("/yml/{*path}", get(yml::get_yml))
         .route("/ai", post(ai::chat_handler));
 
     // 组装应用
     let app = Router::default()
         .nest("/api/v1", api_routes)
-        .route("/yml/*path", get(yml::get_yml))
+        .route("/yml/{*path}", get(yml::get_yml))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new());
