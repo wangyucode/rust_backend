@@ -30,28 +30,26 @@ fn format_timestamp(ts: i64) -> String {
     dt.format("%Y/%m/%d %H:%M:%S").to_string()
 }
 
-// 隐藏用户邮箱
+// 隐藏用户邮箱（用 chars() 按字符处理，避免 UTF-8 多字节字符的字节索引问题）
 fn hide_email(user: &str) -> String {
     lazy_static::lazy_static! {
         static ref EMAIL_REGEX: Regex = Regex::new(r"^\S+@\w+(\.[\w]+)+").unwrap();
     }
 
     if EMAIL_REGEX.is_match(user) {
-        if let Some(at_index) = user.rfind('@') {
-            if at_index > 1 {
-                let first_char = &user[0..1];
-                let asterisks = "*".repeat(at_index - 1);
-                let domain = &user[at_index..];
-                format!("{}{}{}", first_char, asterisks, domain)
-            } else {
-                user.to_string()
+        if let Some((local, domain)) = user.split_once('@') {
+            let mut chars = local.chars();
+            if let Some(first_char) = chars.next() {
+                let remaining_chars = chars.count();
+                if remaining_chars > 0 {
+                    let asterisks = "*".repeat(remaining_chars);
+                    return format!("{}{}@{}", first_char, asterisks, domain);
+                }
             }
-        } else {
-            user.to_string()
         }
-    } else {
-        user.to_string()
     }
+
+    user.to_string()
 }
 
 // 转换Comment为CommentResponse
