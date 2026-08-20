@@ -54,15 +54,11 @@ fn hide_email(user: &str) -> String {
 
 // 转换Comment为CommentResponse
 fn convert_to_response(comment: &Comment) -> CommentResponse {
-    // 处理to字段
-    let to = if let (Some(to_user), Some(to_content)) = (&comment.to_user, &comment.to_content) {
-        Some(ToResponse {
-            content: to_content.clone(),
-            user: hide_email(to_user),
-        })
-    } else {
-        None
-    };
+    // 处理to字段：只要有 to_user 就返回，前端需要展示被回复人；content 缺失时用空字符串兼容历史数据
+    let to = comment.to_user.as_ref().map(|to_user| ToResponse {
+        content: comment.to_content.clone().unwrap_or_default(),
+        user: hide_email(to_user),
+    });
 
     CommentResponse {
         id: comment.id.clone(),
@@ -72,6 +68,13 @@ fn convert_to_response(comment: &Comment) -> CommentResponse {
         create_time: format_timestamp(comment.create_time),
         to,
     }
+}
+
+// 回复对象：前端发送 {user, content} 对象，对应 GET 返回的 ToResponse 结构
+#[derive(Debug, serde::Deserialize)]
+pub struct ToObject {
+    pub user: String,
+    pub content: Option<String>,
 }
 
 // POST评论请求体结构体
@@ -84,9 +87,13 @@ pub struct PostCommentBody {
     key: String,             // 应用密钥
     topic: String,           // 话题
     user: String,            // 用户
-    to: Option<String>,      // 回复对象用户
+    to: Option<ToObject>,    // 回复对象，前端发送 {user, content} 对象
     #[serde(rename = "toId")]
     to_id: Option<String>, // 回复对象ID
+    // 前端会额外发送 like 字段，需声明以避免潜在的 deny_unknown_fields 影响，默认忽略
+    #[serde(default)]
+    #[allow(dead_code)]
+    like: Option<serde_json::Value>,
 }
 
 // 获取评论列表的处理函数
@@ -202,8 +209,10 @@ pub async fn post_comment(
                 // 添加新评论
                 0 => {
                     let content = body.content.as_ref().unwrap().clone();
-                    let to_user = body.to.clone();
-                    let to_content = None; // 这里可以根据toId获取被回复评论的内容，目前暂时设为None
+                    let (to_user, to_content) = match &body.to {
+                        Some(o) => (Some(o.user.clone()), o.content.clone()),
+                        None => (None, None),
+                    };
 
                     // 创建新评论
                     let comment = Comment {
