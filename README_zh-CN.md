@@ -32,6 +32,8 @@
 rust_backend/
 ├── src/
 │   ├── controller/      # API 控制器层
+│   │   ├── ai.rs        # AI 秘书 Agent（read 工具 + Agent 循环 + SSE）
+│   │   ├── ai_tools.rs  # read 工具（路径白名单、大小限制）
 │   │   ├── blog.rs      # 博客相关接口
 │   │   ├── clipboard.rs # 剪贴板接口
 │   │   ├── comment.rs   # 评论接口
@@ -85,6 +87,19 @@ cargo build
 ### 环境变量配置
 
 创建 `.env` 文件并配置环境变量。搜索 `env::var` 相关代码，根据实际情况配置。
+
+| 变量 | 说明 |
+|---|---|
+| `WWW_ROOT` | www 静态产物的宿主机路径，以只读方式挂载到容器的 `/www`（见 `docker-compose.yml`）。Agent 的 `read` 工具只能读取该目录下文件。示例：`/srv/www`。 |
+| `AI_TOOLS_ENABLED` | `0`/`false` 关闭 `read` 工具（聊天降级为纯问答）。默认开启。 |
+
+> 热更新：AI 聊天每次请求都会重读 `.env`（文件优先于进程环境变量），因此改 `AI_MODEL` / `AI_BASE_URL` / `AI_API_KEY` 后**无需重启**，下一个请求自动生效。秘书 system prompt（`data/prompt/secretary.md`）同样逐请求读取。
+
+> 部署说明：`docker-compose.yml` 以 `${WWW_ROOT:-/srv/www}:/www:ro` 挂载。若目录缺失，`read` 工具返回友好错误，聊天降级为纯问答，不会 crash。
+
+### AI 秘书提示词
+
+秘书 system prompt 位于 `data/prompt/secretary.md`.
 
 ## 数据库
 

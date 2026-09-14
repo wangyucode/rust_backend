@@ -33,6 +33,8 @@ impl<T> ApiResponse<T> {
     }
 }
 
+pub mod ai;
+pub mod ai_tools;
 pub mod blog;
 pub mod clipboard;
 pub mod comment;
@@ -41,4 +43,3 @@ pub mod roll;
 pub mod state;
 pub mod wechat;
 pub mod yml;
-pub mod ai;

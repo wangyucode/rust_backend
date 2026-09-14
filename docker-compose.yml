@@ -10,4 +10,5 @@ services:
     volumes:
       - ./.env:/app/.env:ro
       - ./data/:/app/data/
+      - ${WWW_ROOT:-/srv/www}:/www:ro
     restart: unless-stopped

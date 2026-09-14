@@ -32,6 +32,8 @@ This is a backend service project developed using Rust language, built with Axum
 rust_backend/
 ├── src/
 │   ├── controller/      # API Controller Layer
+│   │   ├── ai.rs        # AI secretary agent (read tool + agent loop + SSE)
+│   │   ├── ai_tools.rs  # read tool (path whitelist, size limits)
 │   │   ├── blog.rs      # Blog related interfaces
 │   │   ├── clipboard.rs # Clipboard interfaces
 │   │   ├── comment.rs   # Comment interfaces
@@ -85,6 +87,19 @@ cargo build
 ### Environment Variables Configuration
 
 Create a `.env` file and configure environment variables. Search for `env::var` related code and configure according to actual situations.
+
+| Variable | Description |
+|---|---|
+| `WWW_ROOT` | Host path of the www static output, mounted read-only at `/www` in the container (see `docker-compose.yml`). The agent's `read` tool can only read under this directory. Example: `/srv/www`. |
+| `AI_TOOLS_ENABLED` | `0`/`false` disables the `read` tool (chat degrades to plain Q&A). Enabled by default. |
+
+> Hot-reload: the AI chat handler re-reads `.env` on every request (file takes precedence over process env), so changing `AI_MODEL` / `AI_BASE_URL` / `AI_API_KEY` takes effect on the next request with **no restart**. The secretary system prompt (`data/prompt/secretary.md`) is likewise read per request.
+
+> Deploy: `docker-compose.yml` mounts `${WWW_ROOT:-/srv/www}:/www:ro`. If the directory is missing, the `read` tool returns a friendly error and chat degrades gracefully instead of crashing.
+
+### AI Secretary Prompt
+
+The secretary system prompt lives in `data/prompt/secretary.md`.
 
 ## Database
 

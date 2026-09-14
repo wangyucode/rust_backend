@@ -361,6 +361,67 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiResponse"
 
+  # AI Secretary Agent API
+  /ai:
+    post:
+      tags:
+        - AI
+      summary: Chat with AI secretary agent
+      description: |
+        Chat with 王郁's AI secretary agent. The backend runs a minimal agent loop
+        (up to 5 LLM rounds): the model may call the `read` tool to fetch live
+        blog content (`/www/wycode/`) and gaokao leaderboard data (`/www/gaokao-app/`)
+        from the read-only mounted www directory before answering.
+        Responses stream back using the ai-sdk SSE protocol over `event: message`:
+        `text-start` / `text-delta` / `text-end`, interleaved with `data-read_file`
+        events (`reading` then `done`) so the frontend can show live read status.
+        Set `AI_TOOLS_ENABLED=0` to disable tools (degrades to plain streaming chat).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+            example:
+              user_id: "visitor_abc123"
+              messages:
+                - role: "user"
+                  content: "豆包2.1 turbo 生物考了多少分？"
+      responses:
+        "200":
+          description: SSE stream (ai-sdk protocol + data-read_file events)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: |
+                event: message
+data: {"type":"text-start","id":"msg_abc"}
+
+event: message
+data: {"type":"data-read_file","id":"rf_123","data":{"path":"/www/gaokao-app/result.json","status":"reading"}}
+
+event: message
+data: {"type":"data-read_file","id":"rf_123","data":{"path":"/www/gaokao-app/result.json","status":"done","bytes":45056,"truncated":false}}
+
+event: message
+data: {"type":"text-delta","id":"msg_abc","delta":"豆包2.1 turbo 生物考了…"}
+
+event: message
+data: {"type":"text-end","id":"msg_abc"}
+        "400":
+          description: Bad request (oversized body or invalid JSON)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "502":
+          description: Gateway error (failed to reach AI service)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
   # Config API
   /config:
     get:
@@ -492,6 +553,31 @@ components:
         user: "user123"
         to: "user456"
         toId: "comment_id_123"
+
+    # AI API schemas
+    ChatRequest:
+      type: object
+      required:
+        - user_id
+        - messages
+      properties:
+        user_id:
+          type: string
+          description: Visitor ID (persisted with chat history)
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+              content:
+                type: string
+      example:
+        user_id: "visitor_abc123"
+        messages:
+          - role: "user"
+            content: "博客里那篇 Rust 所有权讲了什么？"
 
     # Clipboard API schemas
     SaveClipboardRequest:

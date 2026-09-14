@@ -8,6 +8,7 @@ This file provides quick reference for development workflows and standards in th
   - [openapi.yml](./src/openapi.yml): Keep the OpenAPI specification in sync with implementation.
   - [README.md](./README.md) & [README_zh-CN.md](./README_zh-CN.md): Update the project structure if new files are added.
 - **Versioning**: For any new release or significant change, increment the version in [Cargo.toml](./Cargo.toml).
+- **Secretary prompt sync**: `data/prompt/secretary.md` is kept in sync with `wycode-next/secretary.md` — always update both together.
 
 ## Build & Test Commands
 
